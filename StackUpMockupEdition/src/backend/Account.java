@@ -1,6 +1,7 @@
 package backend;
 
 import java.io.Serializable;
+/** ENCAPSULATION: the password is never stored, only a salted hash that stays package-private. */
 public final class Account implements Serializable {
 
     private static final long serialVersionUID = 1L;

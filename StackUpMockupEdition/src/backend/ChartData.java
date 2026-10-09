@@ -18,6 +18,13 @@ public final class ChartData {
         return total;
     }
 
+    /** Profit of a list of records: revenues add, expenses subtract (each record decides its own sign). */
+    public static BigDecimal net(List<FinancialRecord> records) {
+        BigDecimal net = BigDecimal.ZERO;
+        for (FinancialRecord record : records) net = net.add(record.signedAmount());
+        return net;
+    }
+
     public static Map<String, BigDecimal> categories(List<FinancialRecord> records, String type) {
         Map<String, BigDecimal> totals = new TreeMap<>();
         for (FinancialRecord record : records) {
@@ -47,7 +54,7 @@ public final class ChartData {
         for (FinancialRecord record : records) {
             if (record.getDate().getYear() == year) {
                 int month = record.getDate().getMonthValue() - 1;
-                int series = record instanceof Revenue ? 0 : 1;
+                int series = record.signedAmount().signum() > 0 ? 0 : 1;   // polymorphism: each record knows its sign
                 amounts[series][month] = amounts[series][month].add(record.getAmount());
             }
         }

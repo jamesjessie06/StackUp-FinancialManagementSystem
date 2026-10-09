@@ -1,56 +1,47 @@
 package frontend;
 
+import frontend.style.*;
+
 import backend.*;
 import java.awt.*;
 import java.util.Arrays;
 import javax.swing.*;
 
-/** Split login: an illustrated teal introduction beside the working sign-in form. */
+/** Just a username, a password and one button. */
 public final class LoginUI extends JFrame {
     private static final long serialVersionUID = 1L;
 
     public LoginUI(FinancialService service) {
         super("StackUp Financial Management System");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(800, 480);
-        setMinimumSize(new Dimension(740, 450));
+        try { setIconImage(javax.imageio.ImageIO.read(Theme.asset("logo.png"))); } catch (Exception ignored) { }
+        setSize(540, 660);
+        setMinimumSize(new Dimension(500, 620));
         setLocationRelativeTo(null);
-        JPanel root = new Theme.SmoothPanel(new BorderLayout());
-        root.setBackground(new Color(233,233,233));
-        root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        setContentPane(root);
-        JPanel introduction = new Theme.RoundedPanel(new Color(246,246,246));
-        introduction.setLayout(new BorderLayout(0,20));
-        introduction.setPreferredSize(new Dimension(325, 420));
-        introduction.setBorder(BorderFactory.createEmptyBorder(30, 26, 24, 26));
-        JPanel words = Theme.clear(new GridLayout(3, 1, 0, 8));
-        words.add(Theme.label("StackUp", 30, Theme.BLACK));
-        words.add(Theme.label("Financial Management System", 13, Theme.MUTED));
-        words.add(Theme.label("Clarity in every transaction.", 14, Theme.TEAL));
-        introduction.add(words, BorderLayout.NORTH);
-        introduction.add(new LoginIllustration());
-        root.add(introduction, BorderLayout.WEST);
+        JPanel outer = new JPanel(new GridBagLayout());
+        outer.setBackground(Theme.FRAME);
+        setContentPane(outer);
 
         boolean first = !service.hasAccounts();
-        JPanel form = new Theme.RoundedPanel(Color.WHITE);
-        form.setLayout(new BorderLayout(0,25));
-        form.setBorder(BorderFactory.createEmptyBorder(48, 34, 44, 20));
-        JPanel heading = Theme.clear(new GridLayout(2, 1, 0, 10));
-        heading.add(Theme.label(first ? "Let's get started" : "Welcome back", 26, Theme.INK));
-        JLabel description = new JLabel(first ? "Create your administrator account." : "Sign in to your StackUp account.");
-        description.setForeground(Theme.MUTED);
-        heading.add(description);
-        form.add(heading, BorderLayout.NORTH);
-        JTextField username = new JTextField();
-        JPasswordField password = new JPasswordField();
-        JPanel fields = Theme.clear(new GridLayout(2, 1, 0, 22));
-        fields.add(Theme.field("Username", username));
-        fields.add(Theme.field("Password", password));
-        form.add(fields);
+        Theme.RoundedPanel card = new Theme.RoundedPanel(Color.WHITE);
+        card.radius = 34;
+        card.setLayout(new GridBagLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(30, 40, 34, 40));
+        card.setPreferredSize(new Dimension(440, 540));
+        JTextField username = Theme.input("e.g. maria");
+        Theme.RoundedPassword password = new Theme.RoundedPassword();
+        password.setPlaceholder(first ? "At least 8 characters" : "Your password");
         JButton login = Theme.button(first ? "Create Account" : "Log In");
-        login.setPreferredSize(new Dimension(320, 44));
-        form.add(login, BorderLayout.SOUTH);
-        root.add(form);
+        login.setPreferredSize(new Dimension(100, 48));
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL;
+        c.gridy = 0; c.insets = new Insets(0, 0, 28, 0); card.add(new LogoPanel(), c);
+        c.gridy = 1; c.insets = new Insets(0, 0, 0, 0); card.add(Theme.field("Username", username), c);
+        c.gridy = 2; c.insets = new Insets(18, 0, 0, 0); card.add(Theme.field("Password", password), c);
+        c.gridy = 3; c.insets = new Insets(30, 0, 0, 0); card.add(login, c);
+        outer.add(card);
+
         login.addActionListener(event -> {
             char[] value = password.getPassword();
             try {
@@ -59,7 +50,7 @@ public final class LoginUI extends JFrame {
                 new DashboardUI(service).setVisible(true);
                 dispose();
             } catch (Exception exception) {
-                JOptionPane.showMessageDialog(this, exception.getMessage());
+                Theme.message(this, "Cannot sign in", exception.getMessage());
             } finally {
                 Arrays.fill(value, '\0');
                 password.setText("");
@@ -68,32 +59,39 @@ public final class LoginUI extends JFrame {
         getRootPane().setDefaultButton(login);
     }
 
-    /** Decorative ledger illustration, without sample transactions or amounts. */
-    private static final class LoginIllustration extends JPanel {
+    /** The StackUp logo. Its white lettering is recoloured dark so it reads on the white card. */
+    private static final class LogoPanel extends JComponent {
         private static final long serialVersionUID = 1L;
-        LoginIllustration() { setOpaque(false); }
+        private final java.awt.image.BufferedImage logo;
+        LogoPanel() {
+            java.awt.image.BufferedImage image = null;
+            try { image = javax.imageio.ImageIO.read(Theme.asset("logo.png")); }
+            catch (Exception ignored) { }
+            if (image != null) {
+                for (int y = 0; y < image.getHeight(); y++)
+                    for (int x = 0; x < image.getWidth(); x++) {
+                        int argb = image.getRGB(x, y);
+                        if ((argb >>> 24) > 0 && ((argb >> 16) & 255) > 185 && ((argb >> 8) & 255) > 185 && (argb & 255) > 185)
+                            image.setRGB(x, y, (argb & 0xFF000000) | (Theme.INK.getRGB() & 0xFFFFFF));
+                    }
+            }
+            logo = image;
+            setPreferredSize(new Dimension(340, 130));
+        }
         protected void paintComponent(Graphics graphics) {
             Graphics2D pen = (Graphics2D) graphics.create();
             pen.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int x = getWidth() / 2 - 88, y = getHeight() / 2 - 68;
-            pen.setColor(new Color(255, 255, 255, 28));
-            pen.fillRoundRect(x + 18, y - 16, 174, 136, 20, 20);
-            pen.setColor(new Color(235, 255, 249));
-            pen.fillRoundRect(x, y, 174, 136, 20, 20);
-            pen.setColor(new Color(177, 226, 212));
-            pen.fillRoundRect(x + 19, y + 20, 74, 9, 7, 7);
-            for (int line = 0; line < 3; line++) {
-                pen.setColor(new Color(219, 242, 234));
-                pen.fillRoundRect(x + 18, y + 47 + line * 23, 138, 13, 6, 6);
-                pen.setColor(Theme.TEAL);
-                pen.fillOval(x + 23, y + 50 + line * 23, 7, 7);
+            pen.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            pen.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            if (logo != null) {
+                double scale = Math.min((getWidth() - 6.0) / logo.getWidth(), (getHeight() - 4.0) / logo.getHeight());
+                int w = (int) (logo.getWidth() * scale), h = (int) (logo.getHeight() * scale);
+                pen.drawImage(logo, (getWidth() - w) / 2, (getHeight() - h) / 2, w, h, null);
+            } else {
+                pen.setColor(Color.WHITE);
+                pen.setFont(Theme.font(Font.BOLD, 30));
+                pen.drawString("StackUp", 40, getHeight() / 2 + 10);
             }
-            pen.setColor(new Color(132, 226, 190));
-            pen.fillOval(x + 133, y + 90, 57, 57);
-            pen.setColor(new Color(0, 99, 87));
-            pen.setStroke(new BasicStroke(2));
-            pen.drawLine(x + 150, y + 117, x + 159, y + 126);
-            pen.drawLine(x + 159, y + 126, x + 174, y + 107);
             pen.dispose();
         }
     }

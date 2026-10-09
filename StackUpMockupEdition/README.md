@@ -1,6 +1,8 @@
 # StackUp — Redesigned UI Edition
 
-A Java Swing interface adapted from the approved teal reference: gray outer frame, slim white icon rail, top navigation tabs, rounded white cards, a dashboard card grid and teal highlights. StackUp menus replace the reference's wallet and banking features. The monthly cash-flow chart stacks actual revenue and expenses; their combined bar height represents transaction activity, not profit. Financial data starts empty. The backend preserves validation, permissions, accounts, persistence, reports and payments. Actual executable screenshots are included in previews.
+A Java Swing interface rebuilt from the green-and-black StackUp reference screens: soft grey frame, a floating brand pill and account pill on top, a slim icon rail on the left (hover an icon for the page name), large rounded white cards, pill buttons and inputs, striped revenue/profit bars, doughnut charts with amount legends, status chips and avatar initials. The dashboard chart stacks expenses (black) with profit (striped) per month. Financial data starts empty. The backend preserves validation, permissions, accounts, persistence, reports and payments. Executable screenshots (empty data) are in previews.
+
+Reference elements with no backing feature were left out rather than faked: the light/dark theme switch, the notes field on Quick Entry, the sign-in entries and "last active" times in the activity log, and the monthly expense limit (replaced by expenses vs. revenue for the month). Export buttons write CSV; Download PDF on the report writes a simple text PDF with amounts as "PHP".
 ## Run in VS Code
 
 1. Extract the ZIP and open StackUpMockupEdition as the project folder.
@@ -18,7 +20,7 @@ Only one menu page appears at a time. Reopening the current page shows an alread
 
 ## Source layout
 
-src/frontend contains newly written Swing screens, Theme, DatePicker, ChartPanel and dialogs. src/backend contains data classes and FinancialService. Main.java starts the app. FRONTEND_CODE.md and BACKEND_CODE.md collect the complete code for review.
+src/frontend holds one file per screen (the page classes), PageSupport (shared table and card helpers), ChartPanel, DatePicker, Pager and Dialogs. src/frontend/style holds only the look: Theme (colors, fonts, rounded panels, chips), Icons and the three Skin classes that round the buttons, drop-downs and scroll bars; none of it changes what the app does. src/backend contains data classes and FinancialService. Main.java starts the app. FRONTEND_CODE.md and BACKEND_CODE.md collect the complete code for review.
 
 
 ## Validation

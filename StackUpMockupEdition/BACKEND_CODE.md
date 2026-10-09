@@ -4,6 +4,7 @@
 package backend;
 
 import java.io.Serializable;
+/** ENCAPSULATION: the password is never stored, only a salted hash that stays package-private. */
 public final class Account implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -57,6 +58,13 @@ public final class ChartData {
         return total;
     }
 
+    /** Profit of a list of records: revenues add, expenses subtract (each record decides its own sign). */
+    public static BigDecimal net(List<FinancialRecord> records) {
+        BigDecimal net = BigDecimal.ZERO;
+        for (FinancialRecord record : records) net = net.add(record.signedAmount());
+        return net;
+    }
+
     public static Map<String, BigDecimal> categories(List<FinancialRecord> records, String type) {
         Map<String, BigDecimal> totals = new TreeMap<>();
         for (FinancialRecord record : records) {
@@ -86,7 +94,7 @@ public final class ChartData {
         for (FinancialRecord record : records) {
             if (record.getDate().getYear() == year) {
                 int month = record.getDate().getMonthValue() - 1;
-                int series = record instanceof Revenue ? 0 : 1;
+                int series = record.signedAmount().signum() > 0 ? 0 : 1;   // polymorphism: each record knows its sign
                 amounts[series][month] = amounts[series][month].add(record.getAmount());
             }
         }
@@ -105,7 +113,7 @@ package backend;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-/** A expense transaction inherits the common financial fields. */
+/** INHERITANCE: Expense is a FinancialRecord whose amount takes away from profit. */
 public final class Expense extends FinancialRecord {
 
     private static final long serialVersionUID = 1L;
@@ -120,6 +128,11 @@ public final class Expense extends FinancialRecord {
     public String getType() {
         return "Expense";
     }
+
+    @Override
+    public BigDecimal signedAmount() {
+        return getAmount().negate();
+    }
 }
 
 ```
@@ -133,6 +146,10 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+/**
+ * ABSTRACTION: the idea of "a money record". It cannot be created on its own, only as a
+ * Revenue or an Expense. ENCAPSULATION: the fields are private and read through getters.
+ */
 public abstract class FinancialRecord implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -185,7 +202,11 @@ public abstract class FinancialRecord implements Serializable {
         return recordedBy;
     }
 
+    /** Each subclass says what it is (polymorphism). */
     public abstract String getType();
+
+    /** The amount as it affects profit: positive for revenue, negative for an expense. */
+    public abstract BigDecimal signedAmount();
 }
 
 ```
@@ -484,12 +505,24 @@ public final class Payment implements Serializable {
 
     private final boolean paid;
 
+    /** Who scheduled it; null for payments saved before this was tracked. */
+    private final String scheduledBy;
+
     public Payment(String description, String category, BigDecimal amount, LocalDate due) {
-        this(UUID.randomUUID().toString(), description, category, amount, due, false);
+        this(UUID.randomUUID().toString(), description, category, amount, due, false, null);
+    }
+
+    public Payment(String description, String category, BigDecimal amount, LocalDate due,
+        String scheduledBy) {
+        this(UUID.randomUUID().toString(), description, category, amount, due, false, scheduledBy);
+    }
+
+    public String getScheduledBy() {
+        return scheduledBy;
     }
 
     private Payment(String id, String description, String category, BigDecimal amount,
-        LocalDate due, boolean paid) {
+        LocalDate due, boolean paid, String scheduledBy) {
         if (description.isBlank() || category.isBlank() || amount.signum() <= 0
             || amount.scale() > 2)
             throw new IllegalArgumentException(
@@ -499,11 +532,12 @@ public final class Payment implements Serializable {
         this.amount = amount;
         this.due = java.util.Objects.requireNonNull(due);
         this.paid = paid;
+        this.scheduledBy = scheduledBy;
         this.id = id;
     }
 
     public Payment asPaid() {
-        return new Payment(id, description, category, amount, due, true);
+        return new Payment(id, description, category, amount, due, true, scheduledBy);
     }
 
     public String getId() {
@@ -540,7 +574,7 @@ package backend;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-/** A revenue transaction inherits the common financial fields. */
+/** INHERITANCE: Revenue is a FinancialRecord whose amount adds to profit. */
 public final class Revenue extends FinancialRecord {
 
     private static final long serialVersionUID = 1L;
@@ -555,6 +589,12 @@ public final class Revenue extends FinancialRecord {
     public String getType() {
         return "Revenue";
     }
+
+    @Override
+    public BigDecimal signedAmount() {
+        return getAmount();
+    }
 }
 
 ```
+

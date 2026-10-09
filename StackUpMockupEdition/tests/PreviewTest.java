@@ -1,5 +1,6 @@
 import backend.*;
 import frontend.*;
+import frontend.style.*;
 import javax.swing.*;
 import java.nio.file.*;
 import java.awt.image.BufferedImage;

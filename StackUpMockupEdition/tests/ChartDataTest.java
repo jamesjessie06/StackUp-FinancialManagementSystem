@@ -30,6 +30,8 @@ public class ChartDataTest {
         check(ChartData.between(records, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 2)).size()
                 == 2,
             "Date boundaries are inclusive");
+        check(ChartData.net(records).compareTo(new BigDecimal("849")) == 0,
+            "Net uses each record's own sign (polymorphism)");
         check(ChartData.categories(List.of(), "Revenue").isEmpty(),
             "Empty chart has no invented categories");
     }

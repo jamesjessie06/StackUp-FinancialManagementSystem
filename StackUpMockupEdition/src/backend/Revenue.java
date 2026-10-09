@@ -2,7 +2,7 @@ package backend;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-/** A revenue transaction inherits the common financial fields. */
+/** INHERITANCE: Revenue is a FinancialRecord whose amount adds to profit. */
 public final class Revenue extends FinancialRecord {
 
     private static final long serialVersionUID = 1L;
@@ -16,5 +16,10 @@ public final class Revenue extends FinancialRecord {
 
     public String getType() {
         return "Revenue";
+    }
+
+    @Override
+    public BigDecimal signedAmount() {
+        return getAmount();
     }
 }

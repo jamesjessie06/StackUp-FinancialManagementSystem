@@ -16,12 +16,24 @@ public final class Payment implements Serializable {
 
     private final boolean paid;
 
+    /** Who scheduled it; null for payments saved before this was tracked. */
+    private final String scheduledBy;
+
     public Payment(String description, String category, BigDecimal amount, LocalDate due) {
-        this(UUID.randomUUID().toString(), description, category, amount, due, false);
+        this(UUID.randomUUID().toString(), description, category, amount, due, false, null);
+    }
+
+    public Payment(String description, String category, BigDecimal amount, LocalDate due,
+        String scheduledBy) {
+        this(UUID.randomUUID().toString(), description, category, amount, due, false, scheduledBy);
+    }
+
+    public String getScheduledBy() {
+        return scheduledBy;
     }
 
     private Payment(String id, String description, String category, BigDecimal amount,
-        LocalDate due, boolean paid) {
+        LocalDate due, boolean paid, String scheduledBy) {
         if (description.isBlank() || category.isBlank() || amount.signum() <= 0
             || amount.scale() > 2)
             throw new IllegalArgumentException(
@@ -31,11 +43,12 @@ public final class Payment implements Serializable {
         this.amount = amount;
         this.due = java.util.Objects.requireNonNull(due);
         this.paid = paid;
+        this.scheduledBy = scheduledBy;
         this.id = id;
     }
 
     public Payment asPaid() {
-        return new Payment(id, description, category, amount, due, true);
+        return new Payment(id, description, category, amount, due, true, scheduledBy);
     }
 
     public String getId() {

@@ -1,41 +1,149 @@
 package frontend;
 
+import frontend.style.*;
+
 import backend.*;
 import java.awt.*;
 import java.util.Arrays;
+import java.util.Locale;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
+/** Create accounts, see who has access, and reset an employee's password. */
 public final class AccountsUI extends PageSupport {
-    private static final long serialVersionUID=1L;
+    private static final long serialVersionUID = 1L;
+    private String role = "Employee";
+
     public AccountsUI(DashboardUI window) {
         super(window);
-        JTextField username=new JTextField();JPasswordField password=new JPasswordField();
-        JComboBox<String> role=new JComboBox<>(new String[]{"Employee","Admin"});
-        JButton save=Theme.button("Save Account");
-        JPanel form=Theme.clear(new GridLayout(4,1,0,12));
-        form.add(Theme.field("Username",username));form.add(Theme.field("Password (8+ characters)",password));form.add(Theme.field("Role",role));form.add(save);
-        JPanel create=Theme.clear(new BorderLayout(0,18));create.add(form,BorderLayout.NORTH);
-        JPanel rolePreview=new AccentPanel(new BorderLayout(0,10),false);
-        rolePreview.setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
-        rolePreview.setPreferredSize(new Dimension(230,112));
-        rolePreview.add(Theme.label("Account access",13,Theme.TEAL),BorderLayout.NORTH);
-        JLabel permission=new JLabel("<html>Employee<br><br>Record transactions and manage payments.</html>");
-        permission.setForeground(Theme.MUTED);
-        rolePreview.add(permission);
-        role.addActionListener(event -> permission.setText(role.getSelectedItem().equals("Admin")
-            ? "<html>Admin<br><br>Review reports, manage records and accounts.</html>"
-            : "<html>Employee<br><br>Record transactions and manage payments.</html>"));
-        create.add(rolePreview,BorderLayout.SOUTH);
-        JPanel left=titled("Create Account",create);left.setPreferredSize(new Dimension(285,400));add(left,BorderLayout.WEST);
-        DefaultTableModel rows=model("Username","Role");JTable accounts=table(rows);
-        Runnable refresh=()->{rows.setRowCount(0);for(Account account:service.getAccounts())rows.addRow(new Object[]{account.getUsername(),account.getRole()});};refresh.run();
-        save.addActionListener(event->{char[] value=password.getPassword();try{service.createAccount(username.getText(),value,(String)role.getSelectedItem());username.setText("");refresh.run();JOptionPane.showMessageDialog(this,"Account created.");}catch(Exception exception){error(exception);}finally{Arrays.fill(value,'\0');password.setText("");}});
-        JTextField selected=new JTextField();selected.setEditable(false);JButton reset=Theme.button("Reset Employee Password");reset.setEnabled(false);
-        accounts.getSelectionModel().addListSelectionListener(event->{int row=accounts.getSelectedRow();selected.setText(row>=0?rows.getValueAt(row,0).toString():"");reset.setEnabled(row>=0&&"Employee".equals(rows.getValueAt(row,1)));});
-        reset.addActionListener(event->{JPasswordField replacement=new JPasswordField();if(JOptionPane.showConfirmDialog(this,Theme.field("New password",replacement),"Reset Employee Password",JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION){char[] value=replacement.getPassword();try{service.resetEmployeePassword(selected.getText(),value);JOptionPane.showMessageDialog(this,"Password updated.");}catch(Exception exception){error(exception);}finally{Arrays.fill(value,'\0');replacement.setText("");}}});
-        JPanel right=Theme.clear(new BorderLayout(0,12));right.add(titled("Registered Accounts",tableArea(accounts,"No registered accounts.")));
-        JPanel resetForm=Theme.clear(new BorderLayout(0,10));resetForm.add(selected);resetForm.add(reset,BorderLayout.SOUTH);
-        JPanel resetCard=titled("Reset Employee Password",resetForm);resetCard.setPreferredSize(new Dimension(400,135));right.add(resetCard,BorderLayout.SOUTH);add(right);
+        JPanel left = Theme.clear(new BorderLayout(0, 12));
+        left.add(createCard(), BorderLayout.NORTH);
+
+        JPanel right = Theme.clear(new BorderLayout(0, 12));
+        DefaultTableModel rows = model("Username", "Role", "Access");
+        JTable accounts = table(rows, "user", "chip", "muted");
+        widths(accounts, 160, 100, 220);
+        accounts.setRowHeight(48);
+        JComboBox<String> employees = new JComboBox<>();
+        JButton reset = Theme.dark("Reset Password");
+        JTextField search = Theme.search("Search users");
+        search.setPreferredSize(new Dimension(260, 44));
+        JLabel count = Theme.muted("", 15);
+        Runnable refresh = () -> {
+            String needle = search.getText().trim().toLowerCase(Locale.ROOT);
+            rows.setRowCount(0);
+            employees.removeAllItems();
+            int total = 0;
+            for (Account account : service.getAccounts()) {
+                total++;
+                if (account.getRole().equals("Employee")) employees.addItem(account.getUsername());
+                if (!account.getUsername().toLowerCase(Locale.ROOT).contains(needle)) continue;
+                rows.addRow(new Object[]{account.getUsername(), account.getRole(),
+                    account.getRole().equals("Admin") ? "Full access" : "Records and payments"});
+            }
+            count.setText("· " + total + (total == 1 ? " user" : " users"));
+            reset.setEnabled(employees.getItemCount() > 0);
+        };
+        JPanel registered = Theme.card();
+        registered.setLayout(new BorderLayout(0, 12));
+        JPanel head = Theme.clear(new BorderLayout());
+        JPanel title = Theme.clear(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        title.add(Theme.label("Registered Accounts", 22, Theme.INK));
+        title.add(count);
+        head.add(title, BorderLayout.WEST);
+        head.add(search, BorderLayout.EAST);
+        registered.add(head, BorderLayout.NORTH);
+        registered.add(tableArea(accounts, "No registered accounts."));
+        search.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent event) { refresh.run(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent event) { refresh.run(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent event) { }
+        });
+        right.add(registered, BorderLayout.CENTER);
+
+        JPasswordField replacement = passwordField("At least 8 characters");
+        reset.addActionListener(event -> {
+            String employee = (String) employees.getSelectedItem();
+            if (employee == null) return;
+            char[] value = replacement.getPassword();
+            try {
+                service.resetEmployeePassword(employee, value);
+                Theme.message(this, "Password updated", employee + " signs in with the new password next time.");
+            } catch (Exception exception) {
+                error(exception);
+            } finally {
+                Arrays.fill(value, '\0');
+                replacement.setText("");
+            }
+        });
+        accounts.getSelectionModel().addListSelectionListener(event -> {
+            int row = accounts.getSelectedRow();
+            if (row >= 0 && "Employee".equals(rows.getValueAt(row, 1))) employees.setSelectedItem(rows.getValueAt(row, 0));
+        });
+        JPanel resetCard = Theme.card();
+        resetCard.setLayout(new BorderLayout(0, 14));
+        JPanel words = Theme.clear(new GridLayout(2, 1, 0, 4));
+        words.add(Theme.label("Reset Employee Password", 22, Theme.INK));
+        words.add(Theme.muted("The employee signs in with the new password next time.", 14));
+        resetCard.add(words, BorderLayout.NORTH);
+        employees.setPreferredSize(new Dimension(200, 44));
+        reset.setPreferredSize(new Dimension(190, 44));
+        JPanel form = Theme.clear(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL; c.weightx = 1; c.insets = new Insets(0, 0, 0, 14);
+        c.gridx = 0; form.add(Theme.field("Employee", employees), c);
+        c.gridx = 1; form.add(Theme.field("New password", replacement), c);
+        c.gridx = 2; c.weightx = 0; c.insets = new Insets(0, 0, 0, 0); c.fill = GridBagConstraints.NONE; c.anchor = GridBagConstraints.SOUTH;
+        form.add(reset, c);
+        resetCard.add(form);
+        right.add(resetCard, BorderLayout.SOUTH);
+
+        add(Theme.columns(12, new double[]{3.2, 6}, left, right));
+        refresh.run();
     }
+
+
+    @Override protected String subtitle() { return "Create user accounts, assign roles and reset employee passwords."; }
+
+    private static JPasswordField passwordField(String hint) {
+        Theme.RoundedPassword field = new Theme.RoundedPassword();
+        field.setPlaceholder(hint);
+        return field;
+    }
+
+    private JPanel createCard() {
+        JTextField username = Theme.input("e.g. maria");
+        JPasswordField password = passwordField("At least 8 characters");
+        JButton save = Theme.button("Save Account");
+        save.setPreferredSize(new Dimension(100, 42));
+        JPanel roles = Theme.segmented(new String[]{"Employee", "Admin"}, 0, Theme.INK, index -> role = index == 0 ? "Employee" : "Admin");
+        JPanel stretch = Theme.clear(new GridLayout(1, 1));
+        stretch.add(roles);
+        JPanel form = Theme.clear(new GridLayout(3, 1, 0, 8));
+        form.add(Theme.field("Username", username));
+        form.add(Theme.field("Password", password));
+        form.add(Theme.field("Role", stretch));
+        JPanel card = Theme.card();
+        card.setLayout(new BorderLayout(0, 14));
+        card.add(Theme.label("Create Account", 22, Theme.INK), BorderLayout.NORTH);
+        card.add(form);
+        card.add(save, BorderLayout.SOUTH);
+        save.addActionListener(event -> {
+            char[] value = password.getPassword();
+            try {
+                service.createAccount(username.getText(), value, role);
+                username.setText("");
+                Theme.message(this, "Account created", "The new account can sign in right away.");
+                window.refresh();
+            } catch (Exception exception) {
+                error(exception);
+            } finally {
+                Arrays.fill(value, '\0');
+                password.setText("");
+            }
+        });
+        return card;
+    }
+
 }
