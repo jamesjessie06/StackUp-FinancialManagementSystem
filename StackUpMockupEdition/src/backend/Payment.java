@@ -1,0 +1,64 @@
+package backend;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+public final class Payment implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    private final String id, description, category;
+
+    private final BigDecimal amount;
+
+    private final LocalDate due;
+
+    private final boolean paid;
+
+    public Payment(String description, String category, BigDecimal amount, LocalDate due) {
+        this(UUID.randomUUID().toString(), description, category, amount, due, false);
+    }
+
+    private Payment(String id, String description, String category, BigDecimal amount,
+        LocalDate due, boolean paid) {
+        if (description.isBlank() || category.isBlank() || amount.signum() <= 0
+            || amount.scale() > 2)
+            throw new IllegalArgumentException(
+                "Description, category and a positive amount are required.");
+        this.description = description.trim();
+        this.category = category.trim();
+        this.amount = amount;
+        this.due = java.util.Objects.requireNonNull(due);
+        this.paid = paid;
+        this.id = id;
+    }
+
+    public Payment asPaid() {
+        return new Payment(id, description, category, amount, due, true);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public LocalDate getDue() {
+        return due;
+    }
+
+    public boolean isPaid() {
+        return paid;
+    }
+}
