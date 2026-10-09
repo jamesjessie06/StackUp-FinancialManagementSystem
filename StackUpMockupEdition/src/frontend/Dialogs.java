@@ -27,10 +27,13 @@ public final class Dialogs {
         form.add(Theme.field("Category", category));
         form.add(Theme.field("Amount (₱)", amount));
         form.add(Theme.field("Date", date));
-        form.setPreferredSize(new Dimension(420, 360));
+        form.setPreferredSize(new Dimension(372, 340));
 
         String title = (existing == null ? "Add " : "Edit ") + type;
-        while (JOptionPane.showConfirmDialog(owner, form, title, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+        String message = existing == null
+            ? (type.equals("Revenue") ? "Log money coming in. It is saved to your name." : "Log money going out. It is saved to your name.")
+            : "Update the details. The change is saved in the activity log.";
+        while (Theme.form(owner, type.equals("Revenue") ? Icons.Kind.PLUS : Icons.Kind.MINUS, title, message, form, existing == null ? "Save" : "Save changes", "Cancel")) {
             try {
                 LocalTime clock = existing == null ? LocalTime.now().withNano(0) : existing.getDate().toLocalTime();
                 LocalDateTime time = date.getSelectedDate().atTime(clock);
@@ -60,9 +63,9 @@ public final class Dialogs {
         form.add(Theme.field("Category", category));
         form.add(Theme.field("Amount (₱)", amount));
         form.add(Theme.field("Due date", date));
-        form.setPreferredSize(new Dimension(420, 360));
+        form.setPreferredSize(new Dimension(372, 340));
 
-        while (JOptionPane.showConfirmDialog(owner, form, "Schedule Payment", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+        while (Theme.form(owner, Icons.Kind.CALENDAR, "Schedule Payment", "Add a bill to pay later. It stays in Payments until it is marked paid.", form, "Schedule", "Cancel")) {
             try {
                 BigDecimal value = new BigDecimal(amount.getText().trim());
                 String by = service.getCurrent().getUsername();

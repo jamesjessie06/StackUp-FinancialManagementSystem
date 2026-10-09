@@ -26,6 +26,7 @@ public final class FinancialService {
         ArrayList<FinancialRecord> records = new ArrayList<>();
         ArrayList<Payment> payments = new ArrayList<>();
         ArrayList<String> activity = new ArrayList<>();
+        ArrayList<Account> pending = new ArrayList<>();
     }
 
     private FinancialService(Path file) throws IOException {
@@ -36,6 +37,7 @@ public final class FinancialService {
                 in.setObjectInputFilter(
                     ObjectInputFilter.Config.createFilter("java.base/*;backend.*;!*"));
                 state = (State) in.readObject();
+                if (state.pending == null) state.pending = new ArrayList<>();
             } catch (ClassNotFoundException | ClassCastException e) {
                 throw new IOException("Cannot read saved data.", e);
             }
@@ -74,6 +76,7 @@ public final class FinancialService {
         nextState.records.addAll(state.records);
         nextState.payments.addAll(state.payments);
         nextState.activity.addAll(state.activity);
+        nextState.pending.addAll(state.pending);
         return nextState;
     }
 
@@ -104,9 +107,7 @@ public final class FinancialService {
             require("Admin");
         else if (!role.equals("Admin"))
             throw new IllegalArgumentException("The first account must be Admin.");
-        for (Account account : state.accounts)
-            if (account.getUsername().equalsIgnoreCase(username))
-                throw new IllegalArgumentException("Username already exists.");
+        checkUsernameFree(username);
         byte[] salt = new byte[16];
         new SecureRandom().nextBytes(salt);
         String encodedSalt = Base64.getEncoder().encodeToString(salt);
@@ -114,6 +115,66 @@ public final class FinancialService {
         nextState.accounts.add(
             new Account(username, role, encodedSalt, hash(password, encodedSalt)));
         save(nextState);
+    }
+
+    private void checkUsernameFree(String username) {
+        for (Account account : state.accounts)
+            if (account.getUsername().equalsIgnoreCase(username))
+                throw new IllegalArgumentException("Username already exists.");
+        for (Account account : state.pending)
+            if (account.getUsername().equalsIgnoreCase(username))
+                throw new IllegalArgumentException("That username is already waiting for approval.");
+    }
+
+    /** Anyone can request an account; it has no role and cannot sign in until an admin approves it. */
+    public void requestAccount(String username, char[] password) throws Exception {
+        username = username.trim();
+        if (username.isBlank() || password.length < 8)
+            throw new IllegalArgumentException(
+                "Enter a username and a password of at least 8 characters.");
+        if (!hasAccounts())
+            throw new IllegalArgumentException("The first account must be created as Admin.");
+        checkUsernameFree(username);
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        String encodedSalt = Base64.getEncoder().encodeToString(salt);
+        State nextState = copy();
+        nextState.pending.add(
+            new Account(username, "Pending", encodedSalt, hash(password, encodedSalt)));
+        save(nextState);
+    }
+
+    public List<Account> getPendingAccounts() {
+        require("Admin");
+        return List.copyOf(state.pending);
+    }
+
+    /** The reviewing admin decides whether the approved account is an Employee or an Admin. */
+    public void approveAccount(String username, String role) throws IOException {
+        require("Admin");
+        if (!role.equals("Admin") && !role.equals("Employee"))
+            throw new IllegalArgumentException("Invalid role.");
+        State nextState = copy();
+        Account found = takePending(nextState, username);
+        nextState.accounts.add(
+            new Account(found.getUsername(), role, found.getSalt(), found.getHash()));
+        log(nextState, "Approved new " + role + " account | " + found.getUsername());
+        save(nextState);
+    }
+
+    public void rejectAccount(String username) throws IOException {
+        require("Admin");
+        State nextState = copy();
+        Account found = takePending(nextState, username);
+        log(nextState, "Rejected account request | " + found.getUsername());
+        save(nextState);
+    }
+
+    private static Account takePending(State nextState, String username) {
+        for (int index = 0; index < nextState.pending.size(); index++)
+            if (nextState.pending.get(index).getUsername().equalsIgnoreCase(username))
+                return nextState.pending.remove(index);
+        throw new IllegalArgumentException("That request no longer exists.");
     }
 
     /** Only admins can inspect account names and roles; password hashes remain private. */
@@ -153,6 +214,12 @@ public final class FinancialService {
                 currentAccount = account;
                 return account;
             }
+        for (Account account : state.pending)
+            if (account.getUsername().equalsIgnoreCase(username.trim())
+                && MessageDigest.isEqual(Base64.getDecoder().decode(account.getHash()),
+                    Base64.getDecoder().decode(hash(password, account.getSalt()))))
+                throw new IllegalArgumentException(
+                    "Your account is still waiting for an admin to approve it.");
         throw new IllegalArgumentException("Incorrect username or password.");
     }
 

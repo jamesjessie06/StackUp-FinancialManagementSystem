@@ -13,8 +13,8 @@ Reference elements with no backing feature were left out rather than faked: the 
 
 ## Roles
 
-Admin: Dashboard, Transaction History (filter/edit/delete), Financial Report, Financial Insights, Activity Log, Accounts, Logout.
-Employee: Dashboard, Financial Record, Transaction History (filter only), Payments (schedule/mark paid), Logout.
+Admin: Dashboard, Reminders, Transaction History (filter/edit/delete), Financial Report, Financial Insights, Activity Log, Accounts, Logout.
+Employee: Dashboard, Reminders, Financial Record, Transaction History (filter only), Payments (schedule/mark paid), Logout.
 
 Only one menu page appears at a time. Reopening the current page shows an already-open warning. Passwords are hashed; the reset panel resets an employee password rather than revealing the original. All charts read actual records, with zero totals and no fabricated bars before data entry.
 

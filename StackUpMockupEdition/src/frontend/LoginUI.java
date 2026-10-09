@@ -15,8 +15,8 @@ public final class LoginUI extends JFrame {
         super("StackUp Financial Management System");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         try { setIconImage(javax.imageio.ImageIO.read(Theme.asset("logo.png"))); } catch (Exception ignored) { }
-        setSize(540, 660);
-        setMinimumSize(new Dimension(500, 620));
+        setSize(540, 720);
+        setMinimumSize(new Dimension(500, 680));
         setLocationRelativeTo(null);
         JPanel outer = new JPanel(new GridBagLayout());
         outer.setBackground(Theme.FRAME);
@@ -27,8 +27,8 @@ public final class LoginUI extends JFrame {
         card.radius = 34;
         card.setLayout(new GridBagLayout());
         card.setBorder(BorderFactory.createEmptyBorder(30, 40, 34, 40));
-        card.setPreferredSize(new Dimension(440, 540));
-        JTextField username = Theme.input("e.g. maria");
+        card.setPreferredSize(new Dimension(440, 600));
+        JTextField username = Theme.input("Your Username");
         Theme.RoundedPassword password = new Theme.RoundedPassword();
         password.setPlaceholder(first ? "At least 8 characters" : "Your password");
         JButton login = Theme.button(first ? "Create Account" : "Log In");
@@ -40,6 +40,12 @@ public final class LoginUI extends JFrame {
         c.gridy = 1; c.insets = new Insets(0, 0, 0, 0); card.add(Theme.field("Username", username), c);
         c.gridy = 2; c.insets = new Insets(18, 0, 0, 0); card.add(Theme.field("Password", password), c);
         c.gridy = 3; c.insets = new Insets(30, 0, 0, 0); card.add(login, c);
+        if (!first) {
+            JButton create = Theme.outline("Create Account");
+            create.setPreferredSize(new Dimension(100, 48));
+            create.addActionListener(event -> createAccount(service));
+            c.gridy = 4; c.insets = new Insets(12, 0, 0, 0); card.add(create, c);
+        }
         outer.add(card);
 
         login.addActionListener(event -> {
@@ -57,6 +63,34 @@ public final class LoginUI extends JFrame {
             }
         });
         getRootPane().setDefaultButton(login);
+    }
+
+    /**
+     * A new Employee account is only a request: it waits in the admin's Accounts page and
+     * cannot sign in until an admin approves it.
+     */
+    private void createAccount(FinancialService service) {
+        JTextField newName = Theme.input("Your Username");
+        Theme.RoundedPassword newPassword = new Theme.RoundedPassword();
+        newPassword.setPlaceholder("At least 8 characters");
+
+        JPanel form = Theme.clear(new GridLayout(2, 1, 0, 12));
+        form.add(Theme.field("Username", newName));
+        form.add(Theme.field("Password", newPassword));
+        form.setPreferredSize(new Dimension(372, 160));
+
+        while (Theme.form(this, Icons.Kind.USERS, "Create account", "An admin will review your request before you can sign in.", form, "Create account", "Cancel")) {
+            char[] secret = newPassword.getPassword();
+            try {
+                service.requestAccount(newName.getText(), secret);
+                Theme.message(this, "Request sent", "An admin will review your account. You can sign in once it is approved.");
+                return;
+            } catch (Exception exception) {
+                Theme.message(this, "Cannot create account", exception.getMessage());
+            } finally {
+                Arrays.fill(secret, '\0');
+            }
+        }
     }
 
     /** The StackUp logo. Its white lettering is recoloured dark so it reads on the white card. */

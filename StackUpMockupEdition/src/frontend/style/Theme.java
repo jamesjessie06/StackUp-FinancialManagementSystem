@@ -2,7 +2,6 @@ package frontend.style;
 
 import java.awt.*;
 import java.awt.geom.*;
-import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.util.Locale;
 import javax.swing.*;
@@ -144,7 +143,7 @@ public final class Theme {
 
     /** "Page already open" pop-up: one dark button, no choice to make. */
     public static void alreadyOpen(Component owner, String page) {
-        popup(owner, Icons.Kind.WINDOW_CHECK, "Page already open",
+        popup(owner, null, Icons.Kind.WINDOW_CHECK, "Page already open",
             "You're already on <b>" + page + "</b>. Pick another section from the sidebar to switch pages.",
             "OK, got it", null);
     }
@@ -152,12 +151,17 @@ public final class Theme {
     /** Themed replacement for JOptionPane.showMessageDialog: title, plain-text message, one OK button. */
     public static void message(Component owner, String title, String message) {
         String safe = String.valueOf(message).replace("&", "&amp;").replace("<", "&lt;").replace("\n", "<br>");
-        popup(owner, Icons.Kind.INFO, title, safe, "OK", null);
+        popup(owner, null, Icons.Kind.INFO, title, safe, "OK", null);
+    }
+
+    /** Themed pop-up that holds a small form. Returns true when the main button was pressed. */
+    public static boolean form(Component owner, Icons.Kind icon, String title, String message, JComponent body, String yes, String no) {
+        return popup(owner, body, icon, title, message, yes, no);
     }
 
     /** Themed yes/no question. Returns true when the main button was pressed. */
     public static boolean confirm(Component owner, Icons.Kind icon, String title, String message, String yes, String no) {
-        return popup(owner, icon, title, message, yes, no);
+        return popup(owner, null, icon, title, message, yes, no);
     }
 
     /**
@@ -165,7 +169,7 @@ public final class Theme {
      * a title, a short message and one or two pill buttons. A hidden JOptionPane holds the
      * answer so the window closes as soon as a button sets its value.
      */
-    private static boolean popup(Component owner, Icons.Kind icon, String title, String message, String yes, String no) {
+    private static boolean popup(Component owner, JComponent extra, Icons.Kind icon, String title, String message, String yes, String no) {
         Window parent = owner == null ? null : SwingUtilities.getWindowAncestor(owner);
         JDialog dialog = new JDialog(parent, title, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
@@ -211,7 +215,13 @@ public final class Theme {
         }
 
         card.add(top, BorderLayout.NORTH);
-        card.add(words);
+        if (extra == null) card.add(words);
+        else {
+            JPanel middle = clear(new BorderLayout(0, 14));
+            middle.add(words, BorderLayout.NORTH);
+            middle.add(extra);
+            card.add(middle);
+        }
         card.add(buttons, BorderLayout.SOUTH);
         card.add(result, BorderLayout.WEST);
 
@@ -219,7 +229,7 @@ public final class Theme {
         dialog.getRootPane().registerKeyboardAction(event -> result.setValue(JOptionPane.CLOSED_OPTION),
             KeyStroke.getKeyStroke("ESCAPE"), JComponent.WHEN_IN_FOCUSED_WINDOW);
         dialog.getRootPane().setDefaultButton(primary);
-        dialog.setPreferredSize(new Dimension(420, no == null ? 270 : 270));
+        if (extra == null) dialog.setPreferredSize(new Dimension(420, 270));
         dialog.pack();
         dialog.setLocationRelativeTo(owner);
         dialog.setVisible(true);
@@ -344,7 +354,8 @@ public final class Theme {
         RoundedPanel group = new RoundedPanel(SOFT);
         group.radius = 999;
         group.outlined = false;
-        group.setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4));
+        group.setLayout(new GridLayout(1, labels.length, 2, 0));   // equal-width, centred labels
+        group.setBorder(new EmptyBorder(4, 4, 4, 4));
         JButton[] buttons = new JButton[labels.length];
         for (int i = 0; i < labels.length; i++) {
             int index = i;
@@ -369,22 +380,6 @@ public final class Theme {
         button.setFont(font(active ? Font.BOLD : Font.PLAIN, 13));
         button.putClientProperty("ghost", active ? null : Boolean.TRUE);
         button.repaint();
-    }
-
-    /** Diagonal green stripes used for revenue and profit throughout the reference. */
-    public static Paint hatch(Color base) {
-        BufferedImage tile = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D pen = tile.createGraphics();
-        pen.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        pen.setColor(base);
-        pen.fillRect(0, 0, 8, 8);
-        pen.setColor(new Color(11, 128, 82));
-        pen.setStroke(new BasicStroke(2.6f));
-        pen.drawLine(-2, 10, 10, -2);
-        pen.drawLine(-2, 2, 2, -2);
-        pen.drawLine(6, 10, 10, 6);
-        pen.dispose();
-        return new TexturePaint(tile, new Rectangle2D.Double(0, 0, 8, 8));
     }
 
     public static class SmoothPanel extends JPanel {
@@ -607,10 +602,14 @@ public final class Theme {
             pen.setColor(dark ? INK : MINT);
             pen.fillOval(0, 0, getWidth(), getHeight());
             pen.setColor(dark ? Color.WHITE : BRAND);
-            pen.setFont(font(Font.BOLD, size * 0.36f));
-            FontMetrics metrics = pen.getFontMetrics();
-            pen.drawString(initials, (getWidth() - metrics.stringWidth(initials)) / 2,
-                (getHeight() + metrics.getAscent() - metrics.getDescent()) / 2);
+            Font initialsFont = font(Font.BOLD, size * 0.36f);
+            pen.setFont(initialsFont);
+            // Centre the visible letter shapes, not the font's line box, so the initials sit in the middle of the circle.
+            java.awt.geom.Rectangle2D shape = initialsFont
+                .createGlyphVector(pen.getFontRenderContext(), initials).getVisualBounds();
+            pen.drawString(initials,
+                (float) ((getWidth() - shape.getWidth()) / 2 - shape.getX()),
+                (float) ((getHeight() - shape.getHeight()) / 2 - shape.getY()));
             pen.dispose();
         }
     }

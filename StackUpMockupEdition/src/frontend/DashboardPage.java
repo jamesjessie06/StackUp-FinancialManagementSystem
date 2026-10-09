@@ -27,7 +27,7 @@ public final class DashboardPage extends PageSupport {
 
     @Override protected String subtitle() { return "Stay on top of your revenue, expenses and upcoming payments."; }
 
-    /** The month label, plus quick Add buttons for employees (admins only view). */
+    /** The month label. */
     @Override protected JComponent actions() {
         JPanel row = Theme.clear(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         JButton month = Theme.outline(LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)));
@@ -35,16 +35,6 @@ public final class DashboardPage extends PageSupport {
         month.setFocusable(false);
         month.setCursor(Cursor.getDefaultCursor());
         row.add(month);
-        if (!admin) {
-            JButton addRevenue = Theme.dark("Add Revenue");
-            addRevenue.setIcon(Icons.of(Icons.Kind.PLUS, Color.WHITE, 16));
-            addRevenue.addActionListener(event -> record("Revenue", null));
-            JButton addExpense = Theme.outline("Add Expense");
-            addExpense.setIcon(Icons.of(Icons.Kind.MINUS, Theme.INK, 16));
-            addExpense.addActionListener(event -> record("Expense", null));
-            row.add(addRevenue);
-            row.add(addExpense);
-        }
         return row;
     }
 

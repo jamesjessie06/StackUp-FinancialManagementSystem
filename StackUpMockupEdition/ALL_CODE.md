@@ -773,7 +773,7 @@ public final class AccountsUI extends PageSupport {
     }
 
     private JPanel createCard() {
-        JTextField username = Theme.input("e.g. maria");
+        JTextField username = Theme.input("");
         JPasswordField password = passwordField("At least 8 characters");
         JButton save = Theme.button("Save Account");
         save.setPreferredSize(new Dimension(100, 42));
@@ -958,13 +958,15 @@ import javax.swing.*;
 /** Real-data charts: nothing is drawn unless a saved record backs it. */
 public final class ChartPanel extends JPanel {
     private static final long serialVersionUID = 1L;
-    public enum Mode { CASH_FLOW, MONTHLY, TOTALS, REVENUE_CATEGORIES, EXPENSE_CATEGORIES }
+    public enum Mode { MONTHLY, TOTALS, REVENUE_CATEGORIES, EXPENSE_CATEGORIES }
     private static final Color[] SLICES = {Theme.INK, Theme.BRAND, Theme.BRAND_MID, Theme.BRAND_PALE, new Color(200, 205, 203)};
     private static final String[] MONTHS = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
     private final List<FinancialRecord> records;
     private final Mode mode;
     private final int year;
+    private int hover = -1;
+    public static final Color REVENUE_LINE = Theme.BRAND, EXPENSE_LINE = new Color(232, 84, 84);
 
     public ChartPanel(List<FinancialRecord> records, Mode mode, int year) {
         this.records = List.copyOf(records);
@@ -972,6 +974,22 @@ public final class ChartPanel extends JPanel {
         this.year = year;
         setOpaque(false);
         setPreferredSize(new Dimension(300, 240));
+        if (mode == Mode.MONTHLY) hoverTracking();
+    }
+
+    /** Remembers which month the mouse is over so the line chart can show its values. */
+    private void hoverTracking() {
+        addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            public void mouseMoved(java.awt.event.MouseEvent event) {
+                double slot = (getWidth() - 24 - 52) / 12.0;
+                int month = (int) Math.floor((event.getX() - 52) / slot);
+                int next = month < 0 || month >= shownMonths() || records.isEmpty() ? -1 : month;
+                if (next != hover) { hover = next; repaint(); }
+            }
+        });
+        addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseExited(java.awt.event.MouseEvent event) { hover = -1; repaint(); }
+        });
     }
 
     protected void paintComponent(Graphics graphics) {
@@ -981,7 +999,6 @@ public final class ChartPanel extends JPanel {
         pen.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         pen.setFont(Theme.font(Font.PLAIN, 12));
         if (mode == Mode.REVENUE_CATEGORIES || mode == Mode.EXPENSE_CATEGORIES) donut(pen);
-        else if (mode == Mode.CASH_FLOW) cashFlow(pen);
         else if (mode == Mode.MONTHLY) monthly(pen);
         else totals(pen);
         pen.dispose();
@@ -1055,51 +1072,90 @@ public final class ChartPanel extends JPanel {
 
     // -------------------------------------------------------------- charts
 
-    /** Dashboard: expenses in black with profit stacked on top in stripes, one bar per month. */
-    private void cashFlow(Graphics2D pen) {
+    /** Insights: revenue and expenses as two smooth lines, one point per month; hover to read a month. */
+    private void monthly(Graphics2D pen) {
         BigDecimal[][] data = ChartData.monthly(records, year);
+        int shown = shownMonths();
         double highest = 0;
-        for (int m = 0; m < 12; m++)
-            highest = Math.max(highest, data[1][m].doubleValue() + Math.max(0, data[2][m].doubleValue()));
+        for (int m = 0; m < shown; m++) highest = Math.max(highest, Math.max(data[0][m].doubleValue(), data[1][m].doubleValue()));
         double max = ceiling(highest);
-        int left = 46, right = getWidth() - 6, top = 44, bottom = getHeight() - 30;
-        legend(pen, right, 14, new String[]{"Profit", "Expenses"}, new Paint[]{Theme.hatch(Theme.BRAND_MID), Theme.INK});
+        int left = 52, right = getWidth() - 24, top = 24, bottom = getHeight() - 34;
         grid(pen, left, right, top, bottom, max, true);
-        double slot = (right - left) / 12.0, width = Math.max(8, Math.min(34, slot - 6));
-        Paint stripes = Theme.hatch(Theme.BRAND_MID);
-        for (int m = 0; m < 12; m++) {
-            double x = left + slot * m + (slot - width) / 2;
-            double expense = data[1][m].doubleValue(), profit = Math.max(0, data[2][m].doubleValue());
-            double expenseTop = bottom - expense / max * (bottom - top);
-            double profitTop = expenseTop - profit / max * (bottom - top);
-            bar(pen, Theme.INK, x, expenseTop, width, bottom);
-            if (profit > 0) bar(pen, stripes, x, profitTop, width, expenseTop - 2);
-            text(pen, slot < 34 ? MONTHS[m].substring(0, 1) : MONTHS[m], x + width / 2, bottom + 20, Theme.MUTED, true);
+        double slot = (right - left) / 12.0;
+        for (int m = 0; m < 12; m++) text(pen, MONTHS[m], left + slot * (m + .5), bottom + 22, Theme.MUTED, true);
+
+        double[] x = new double[shown], revenue = new double[shown], expense = new double[shown];
+        for (int m = 0; m < shown; m++) {
+            x[m] = left + slot * (m + .5);
+            revenue[m] = bottom - data[0][m].doubleValue() / max * (bottom - top);
+            expense[m] = bottom - data[1][m].doubleValue() / max * (bottom - top);
+        }
+        if (hover >= 0 && hover < shown) {
+            pen.setColor(new Color(0, 0, 0, 30));
+            pen.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, new float[]{4f, 4f}, 0f));
+            pen.draw(new Line2D.Double(x[hover], top, x[hover], bottom));
+        }
+        curve(pen, x, expense, EXPENSE_LINE, top, bottom);
+        curve(pen, x, revenue, REVENUE_LINE, top, bottom);
+        if (hover >= 0 && hover < shown) {
+            dot(pen, x[hover], revenue[hover], REVENUE_LINE);
+            dot(pen, x[hover], expense[hover], EXPENSE_LINE);
+            tooltip(pen, x[hover], Math.min(revenue[hover], expense[hover]), left, right,
+                MONTHS[hover] + " " + year, data[0][hover], data[1][hover]);
         }
         if (records.isEmpty()) emptyNote(pen, (left + right) / 2, (top + bottom) / 2);
     }
 
-    /** Insights: revenue (stripes) beside expenses (black) for each month of the year. */
-    private void monthly(Graphics2D pen) {
-        BigDecimal[][] data = ChartData.monthly(records, year);
-        double highest = 0;
-        for (int m = 0; m < 12; m++) highest = Math.max(highest, Math.max(data[0][m].doubleValue(), data[1][m].doubleValue()));
-        double max = ceiling(highest);
-        int left = 52, right = getWidth() - 12, top = 24, bottom = getHeight() - 34;
-        grid(pen, left, right, top, bottom, max, true);
-        double slot = (right - left) / 12.0, width = Math.max(5, Math.min(24, slot / 3.2));
-        Paint stripes = Theme.hatch(Theme.BRAND_MID);
-        for (int m = 0; m < 12; m++) {
-            double center = left + slot * (m + .5);
-            double revenue = data[0][m].doubleValue(), expense = data[1][m].doubleValue();
-            double revenueTop = bottom - revenue / max * (bottom - top), expenseTop = bottom - expense / max * (bottom - top);
-            if (revenue > 0) bar(pen, stripes, center - width - 1.5, revenueTop, width, bottom);
-            else bar(pen, stripes, center - width - 1.5, bottom - 3, width, bottom);
-            if (expense > 0) bar(pen, Theme.INK, center + 1.5, expenseTop, width, bottom);
-            else bar(pen, Theme.INK, center + 1.5, bottom - 3, width, bottom);
-            text(pen, slot < 34 ? MONTHS[m].substring(0, 1) : MONTHS[m], center, bottom + 22, Theme.MUTED, true);
+    /** Months to plot: all 12, or only up to the current month when showing this year. */
+    private int shownMonths() {
+        return year == java.time.LocalDate.now().getYear() ? java.time.LocalDate.now().getMonthValue() : 12;
+    }
+
+    /** Smooth line through the points (a Catmull-Rom spline turned into Bezier curves). */
+    private void curve(Graphics2D pen, double[] x, double[] y, Color color, int top, int bottom) {
+        if (x.length == 0) return;
+        Path2D path = new Path2D.Double();
+        path.moveTo(x[0], y[0]);
+        for (int i = 0; i < x.length - 1; i++) {
+            int before = Math.max(0, i - 1), after = Math.min(x.length - 1, i + 2);
+            double c1x = x[i] + (x[i + 1] - x[before]) / 6, c1y = y[i] + (y[i + 1] - y[before]) / 6;
+            double c2x = x[i + 1] - (x[after] - x[i]) / 6, c2y = y[i + 1] - (y[after] - y[i]) / 6;
+            c1y = Math.max(top, Math.min(bottom, c1y));
+            c2y = Math.max(top, Math.min(bottom, c2y));
+            path.curveTo(c1x, c1y, c2x, c2y, x[i + 1], y[i + 1]);
         }
-        if (records.isEmpty()) emptyNote(pen, (left + right) / 2, (top + bottom) / 2);
+        pen.setColor(color);
+        pen.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        pen.draw(path);
+    }
+
+    /** A point with a white centre and a coloured ring. */
+    private void dot(Graphics2D pen, double x, double y, Color color) {
+        pen.setStroke(new BasicStroke(3f));
+        pen.setColor(Color.WHITE);
+        pen.fill(new Ellipse2D.Double(x - 6, y - 6, 12, 12));
+        pen.setColor(color);
+        pen.draw(new Ellipse2D.Double(x - 6, y - 6, 12, 12));
+    }
+
+    private void tooltip(Graphics2D pen, double x, double y, int left, int right, String month, BigDecimal revenue, BigDecimal expense) {
+        pen.setStroke(new BasicStroke(1f));
+        pen.setFont(Theme.font(Font.BOLD, 12));
+        String[] lines = {month, "Revenue  " + Theme.whole(revenue), "Expenses  " + Theme.whole(expense)};
+        int width = 0;
+        for (String line : lines) width = Math.max(width, pen.getFontMetrics().stringWidth(line));
+        width += 28;
+        int height = 74;
+        double bx = x + 16 + width > right ? x - 16 - width : x + 16;
+        double by = Math.max(6, y - height - 12);
+        pen.setColor(Color.WHITE);
+        pen.fill(new RoundRectangle2D.Double(bx, by, width, height, 16, 16));
+        pen.setColor(Theme.LINE);
+        pen.draw(new RoundRectangle2D.Double(bx, by, width, height, 16, 16));
+        text(pen, lines[0], bx + 14, by + 22, Theme.INK, false);
+        pen.setFont(Theme.font(Font.PLAIN, 12));
+        text(pen, lines[1], bx + 14, by + 42, REVENUE_LINE, false);
+        text(pen, lines[2], bx + 14, by + 60, EXPENSE_LINE, false);
     }
 
     /** Report: three bars with their values printed above them. */
@@ -1108,7 +1164,7 @@ public final class ChartPanel extends JPanel {
         double expense = ChartData.total(records, "Expense").doubleValue();
         double[] values = {revenue, expense, revenue - expense};
         String[] names = {"Revenue", "Expenses", "Profit"};
-        Paint[] paints = {Theme.hatch(Theme.BRAND_MID), Theme.INK, Theme.BRAND};
+        Paint[] paints = {Theme.BRAND, Theme.INK, Theme.BRAND};
         double max = ceiling(Math.max(revenue, expense)), min = values[2] < 0 ? -ceiling(-values[2]) : 0;
         int left = 52, right = getWidth() - 16, top = 34, bottom = getHeight() - 34;
         double zero = bottom - (0 - min) / (max - min) * (bottom - top);
@@ -1411,14 +1467,15 @@ public final class DashboardUI extends JFrame {
 
     private String[] pages() {
         return admin
-            ? new String[]{"Dashboard", "Transaction History", "Financial Report", "Financial Insights", "Activity Log", "Accounts"}
-            : new String[]{"Dashboard", "Financial Record", "Payments", "Transaction History"};
+            ? new String[]{"Dashboard", "Reminders", "Transaction History", "Financial Report", "Financial Insights", "Activity Log", "Accounts"}
+            : new String[]{"Dashboard", "Reminders", "Financial Record", "Payments", "Transaction History"};
     }
 
     private static Icons.Kind iconFor(String page) {
         switch (page) {
             case "Financial Record": return Icons.Kind.PLUS_CIRCLE;
             case "Payments": return Icons.Kind.CLOCK;
+            case "Reminders": return Icons.Kind.BELL;
             case "Transaction History": return Icons.Kind.DOC;
             case "Financial Report": return Icons.Kind.BARS;
             case "Financial Insights": return Icons.Kind.PIE;
@@ -1461,11 +1518,6 @@ public final class DashboardUI extends JFrame {
         bar.add(brand, BorderLayout.WEST);
 
         JPanel right = Theme.clear(new FlowLayout(FlowLayout.RIGHT, 14, 0));
-        Theme.RoundedPanel tools = pill();
-        tools.setLayout(new FlowLayout(FlowLayout.CENTER, 4, 6));
-        JButton bell = toolButton(Icons.Kind.BELL, "Payment reminders", event -> remind());
-        tools.add(bell);
-        right.add(tools);
         right.add(userPill());
         bar.add(right, BorderLayout.EAST);
         return bar;
@@ -1475,32 +1527,6 @@ public final class DashboardUI extends JFrame {
         Theme.RoundedPanel panel = new Theme.RoundedPanel(Color.WHITE);
         panel.radius = 999;
         return panel;
-    }
-
-    private JButton toolButton(Icons.Kind kind, String tip, java.awt.event.ActionListener action) {
-        JButton button = new JButton(Icons.of(kind, Theme.INK, 20));
-        button.setToolTipText(tip);
-        button.setBackground(Color.WHITE);
-        button.setForeground(Theme.INK);
-        button.putClientProperty("ghost", Boolean.TRUE);
-        button.setContentAreaFilled(false);
-        button.setFocusPainted(false);
-        button.setBorder(new EmptyBorder(9, 11, 9, 11));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.addActionListener(action);
-        return button;
-    }
-
-    private void remind() {
-        long pending = service.getPayments().stream().filter(p -> !p.isPaid()).count();
-        String message;
-        if (pending == 0) message = "No payments are waiting.";
-        else {
-            Payment next = service.getPayments().stream().filter(p -> !p.isPaid())
-                .min(java.util.Comparator.comparing(Payment::getDue)).orElseThrow();
-            message = pending + " payment(s) pending.\nNext: " + next.getDescription() + " due " + next.getDue().format(PageSupport.DAY) + ".";
-        }
-        Theme.message(this, "Payment reminders", message);
     }
 
     private JComponent userPill() {
@@ -1615,6 +1641,7 @@ public final class DashboardUI extends JFrame {
             case "Activity Log": screen = new ActivityLogUI(this); break;
             case "Accounts": screen = new AccountsUI(this); break;
             case "Payments": screen = new PaymentsUI(this); break;
+            case "Reminders": screen = new RemindersUI(this); break;
             default: screen = new DashboardPage(this);
         }
         String title = screen.title() != null ? screen.title() : page.equals("Dashboard") ? greeting() : page;
@@ -1892,20 +1919,17 @@ public final class FinancialInsightsUI extends PageSupport {
         List<FinancialRecord> scope = ChartData.between(all, start, end);
 
         body.removeAll();
-        JPanel top = Theme.clear(new BorderLayout(0, 12));
-        top.add(Theme.equal(12, highlight("Revenue", scope, true), highlight("Expense", scope, false)), BorderLayout.NORTH);
-        body.add(top, BorderLayout.NORTH);
 
         JPanel middle = Theme.clear(new BorderLayout(0, 12));
         middle.add(Theme.equal(12,
-            chartCard("Revenue by Category", null, new ChartPanel(scope, ChartPanel.Mode.REVENUE_CATEGORIES, year), 170),
-            chartCard("Expense by Category", null, new ChartPanel(scope, ChartPanel.Mode.EXPENSE_CATEGORIES, year), 170)), BorderLayout.NORTH);
+            chartCard("Revenue by Category", null, new ChartPanel(scope, ChartPanel.Mode.REVENUE_CATEGORIES, year), 210),
+            chartCard("Expense by Category", null, new ChartPanel(scope, ChartPanel.Mode.EXPENSE_CATEGORIES, year), 210)), BorderLayout.NORTH);
         JPanel monthly = chartCard("Monthly Performance",
-            "January – December " + year + " · " + today.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " to date",
-            new ChartPanel(all, ChartPanel.Mode.MONTHLY, year), 150);
+            "Revenue and expenses for each month of " + year + " - hover a month to see the amounts",
+            new ChartPanel(all, ChartPanel.Mode.MONTHLY, year), 200);
         JPanel legend = Theme.clear(new FlowLayout(FlowLayout.RIGHT, 14, 0));
-        legend.add(legendItem("Revenue", Theme.hatch(Theme.BRAND_MID)));
-        legend.add(legendItem("Expenses", Theme.INK));
+        legend.add(legendItem("Revenue", ChartPanel.REVENUE_LINE));
+        legend.add(legendItem("Expenses", ChartPanel.EXPENSE_LINE));
         ((JPanel) monthly.getComponent(0)).add(legend, BorderLayout.EAST);
         middle.add(monthly, BorderLayout.CENTER);
         body.add(middle);
@@ -1951,20 +1975,6 @@ public final class FinancialInsightsUI extends PageSupport {
         return card;
     }
 
-    private JPanel highlight(String type, List<FinancialRecord> scope, boolean revenue) {
-        FinancialRecord best = null;
-        for (FinancialRecord record : scope)
-            if (record.getType().equals(type) && (best == null || record.getAmount().compareTo(best.getAmount()) > 0)) best = record;
-        Theme.RoundedPanel card = Theme.hero(revenue ? Theme.BRAND : Theme.INK);
-        card.setLayout(new BorderLayout(18, 0));
-        card.setBorder(new EmptyBorder(14, 20, 14, 20));
-        card.add(Theme.badge(revenue ? Icons.Kind.UP_RIGHT : Icons.Kind.DOWN_RIGHT, Color.WHITE, revenue ? Theme.BRAND : Theme.INK, 52), BorderLayout.WEST);
-        JPanel text = Theme.clear(new GridLayout(2, 1, 0, 3));
-        text.add(Theme.plain("Highest " + type, 15, new Color(232, 244, 238)));
-        text.add(Theme.label(best == null ? "—" : Theme.money(best.getAmount()), 32, Color.WHITE));
-        card.add(text);
-        return card;
-    }
 }
 
 ```
@@ -2213,8 +2223,8 @@ public final class LoginUI extends JFrame {
         super("StackUp Financial Management System");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         try { setIconImage(javax.imageio.ImageIO.read(Theme.asset("logo.png"))); } catch (Exception ignored) { }
-        setSize(540, 660);
-        setMinimumSize(new Dimension(500, 620));
+        setSize(540, 720);
+        setMinimumSize(new Dimension(500, 680));
         setLocationRelativeTo(null);
         JPanel outer = new JPanel(new GridBagLayout());
         outer.setBackground(Theme.FRAME);
@@ -2225,8 +2235,8 @@ public final class LoginUI extends JFrame {
         card.radius = 34;
         card.setLayout(new GridBagLayout());
         card.setBorder(BorderFactory.createEmptyBorder(30, 40, 34, 40));
-        card.setPreferredSize(new Dimension(440, 540));
-        JTextField username = Theme.input("e.g. maria");
+        card.setPreferredSize(new Dimension(440, 600));
+        JTextField username = Theme.input("");
         Theme.RoundedPassword password = new Theme.RoundedPassword();
         password.setPlaceholder(first ? "At least 8 characters" : "Your password");
         JButton login = Theme.button(first ? "Create Account" : "Log In");
@@ -2238,6 +2248,12 @@ public final class LoginUI extends JFrame {
         c.gridy = 1; c.insets = new Insets(0, 0, 0, 0); card.add(Theme.field("Username", username), c);
         c.gridy = 2; c.insets = new Insets(18, 0, 0, 0); card.add(Theme.field("Password", password), c);
         c.gridy = 3; c.insets = new Insets(30, 0, 0, 0); card.add(login, c);
+        if (!first) {
+            JButton create = Theme.outline("Create Account");
+            create.setPreferredSize(new Dimension(100, 48));
+            create.addActionListener(event -> createAccount(service));
+            c.gridy = 4; c.insets = new Insets(12, 0, 0, 0); card.add(create, c);
+        }
         outer.add(card);
 
         login.addActionListener(event -> {
@@ -2255,6 +2271,42 @@ public final class LoginUI extends JFrame {
             }
         });
         getRootPane().setDefaultButton(login);
+    }
+
+    /**
+     * New accounts always need an admin's approval: the admin signs in inside the form, the
+     * new Employee account is created, and the admin is signed out again.
+     */
+    private void createAccount(FinancialService service) {
+        JTextField adminName = Theme.input("Admin username");
+        Theme.RoundedPassword adminPassword = new Theme.RoundedPassword();
+        adminPassword.setPlaceholder("Admin password");
+        JTextField newName = Theme.input("");
+        Theme.RoundedPassword newPassword = new Theme.RoundedPassword();
+        newPassword.setPlaceholder("At least 8 characters");
+
+        JPanel form = Theme.clear(new GridLayout(4, 1, 0, 12));
+        form.add(Theme.field("Admin username", adminName));
+        form.add(Theme.field("Admin password", adminPassword));
+        form.add(Theme.field("New employee username", newName));
+        form.add(Theme.field("New employee password", newPassword));
+        form.setPreferredSize(new Dimension(372, 330));
+
+        while (Theme.form(this, Icons.Kind.USERS, "Create account", "An admin signs in here to approve the new employee.", form, "Create account", "Cancel")) {
+            char[] adminSecret = adminPassword.getPassword(), newSecret = newPassword.getPassword();
+            try {
+                service.login(adminName.getText(), adminSecret);
+                try { service.createAccount(newName.getText(), newSecret, "Employee"); }
+                finally { service.logout(); }
+                Theme.message(this, "Account created", "The new employee can sign in right away.");
+                return;
+            } catch (Exception exception) {
+                Theme.message(this, "Cannot create account", exception.getMessage());
+            } finally {
+                Arrays.fill(adminSecret, '\0');
+                Arrays.fill(newSecret, '\0');
+            }
+        }
     }
 
     /** The StackUp logo. Its white lettering is recoloured dark so it reads on the white card. */
@@ -2908,6 +2960,76 @@ public final class PaymentsUI extends PageSupport {
 
 ```
 
+## src/frontend/RemindersUI.java
+
+```java
+package frontend;
+
+import backend.*;
+import frontend.style.*;
+import java.awt.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.List;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
+/** Every unpaid payment in due-date order, so nothing is missed. */
+public final class RemindersUI extends PageSupport {
+    private static final long serialVersionUID = 1L;
+
+    public RemindersUI(DashboardUI window) {
+        super(window);
+        List<Payment> pending = new ArrayList<>();
+        for (Payment payment : service.getPayments()) if (!payment.isPaid()) pending.add(payment);
+        pending.sort(Comparator.comparing(Payment::getDue));
+
+        int overdue = 0, thisWeek = 0, later = 0;
+        BigDecimal weekTotal = BigDecimal.ZERO;
+        for (Payment payment : pending) {
+            long days = ChronoUnit.DAYS.between(LocalDate.now(), payment.getDue());
+            if (days < 0) overdue++;
+            else if (days <= 7) { thisWeek++; weekTotal = weekTotal.add(payment.getAmount()); }
+            else later++;
+        }
+        JPanel stats = Theme.equal(12,
+            stat("Overdue", Integer.toString(overdue), overdue == 0 ? "Nothing is late" : "Needs attention", STYLE_DARK, Icons.Kind.BELL, Color.WHITE, 26),
+            stat("Due This Week", Integer.toString(thisWeek), thisWeek == 0 ? "Nothing due" : Theme.whole(weekTotal) + " to pay", STYLE_GREEN, Icons.Kind.CLOCK, Color.WHITE, 26),
+            stat("Coming Up Later", Integer.toString(later), "Scheduled after 7 days", STYLE_WHITE, Icons.Kind.CALENDAR, Theme.INK, 26));
+        stats.setPreferredSize(new Dimension(700, 120));
+        add(stats, BorderLayout.NORTH);
+
+        DefaultTableModel rows = model("Reminder", "Category", "Amount", "Due Date", "Status");
+        for (Payment payment : pending)
+            rows.addRow(new Object[]{new Tile(payment.getDue(), payment.getDescription()), payment.getCategory(),
+                Theme.money(payment.getAmount()), payment.getDue().format(DAY), dueText(payment)});
+        JTable table = table(rows, "tile", "muted", "bold", "muted", "chip");
+        table.setRowHeight(54);
+        widths(table, 240, 110, 120, 120, 160);
+
+        JPanel card = Theme.card();
+        card.setLayout(new BorderLayout(0, 12));
+        card.add(Theme.label("Payment Reminders", 20, Theme.INK), BorderLayout.NORTH);
+        card.add(tableArea(table, "No reminders"));
+        add(card);
+    }
+
+    @Override protected String subtitle() { return "Every payment still to be made, soonest first."; }
+
+    /** Employees can jump straight to the page where payments are marked paid. */
+    @Override protected JComponent actions() {
+        if (admin) return null;
+        JButton open = Theme.dark("Open Payments");
+        open.setIcon(Icons.of(Icons.Kind.CLOCK, Color.WHITE, 18));
+        open.addActionListener(event -> window.navigate("Payments"));
+        return open;
+    }
+}
+
+```
+
 ## src/frontend/TransactionHistoryUI.java
 
 ```java
@@ -3392,7 +3514,6 @@ package frontend.style;
 
 import java.awt.*;
 import java.awt.geom.*;
-import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.util.Locale;
 import javax.swing.*;
@@ -3534,7 +3655,7 @@ public final class Theme {
 
     /** "Page already open" pop-up: one dark button, no choice to make. */
     public static void alreadyOpen(Component owner, String page) {
-        popup(owner, Icons.Kind.WINDOW_CHECK, "Page already open",
+        popup(owner, null, Icons.Kind.WINDOW_CHECK, "Page already open",
             "You're already on <b>" + page + "</b>. Pick another section from the sidebar to switch pages.",
             "OK, got it", null);
     }
@@ -3542,12 +3663,17 @@ public final class Theme {
     /** Themed replacement for JOptionPane.showMessageDialog: title, plain-text message, one OK button. */
     public static void message(Component owner, String title, String message) {
         String safe = String.valueOf(message).replace("&", "&amp;").replace("<", "&lt;").replace("\n", "<br>");
-        popup(owner, Icons.Kind.INFO, title, safe, "OK", null);
+        popup(owner, null, Icons.Kind.INFO, title, safe, "OK", null);
+    }
+
+    /** Themed pop-up that holds a small form. Returns true when the main button was pressed. */
+    public static boolean form(Component owner, Icons.Kind icon, String title, String message, JComponent body, String yes, String no) {
+        return popup(owner, body, icon, title, message, yes, no);
     }
 
     /** Themed yes/no question. Returns true when the main button was pressed. */
     public static boolean confirm(Component owner, Icons.Kind icon, String title, String message, String yes, String no) {
-        return popup(owner, icon, title, message, yes, no);
+        return popup(owner, null, icon, title, message, yes, no);
     }
 
     /**
@@ -3555,7 +3681,7 @@ public final class Theme {
      * a title, a short message and one or two pill buttons. A hidden JOptionPane holds the
      * answer so the window closes as soon as a button sets its value.
      */
-    private static boolean popup(Component owner, Icons.Kind icon, String title, String message, String yes, String no) {
+    private static boolean popup(Component owner, JComponent extra, Icons.Kind icon, String title, String message, String yes, String no) {
         Window parent = owner == null ? null : SwingUtilities.getWindowAncestor(owner);
         JDialog dialog = new JDialog(parent, title, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
@@ -3601,7 +3727,13 @@ public final class Theme {
         }
 
         card.add(top, BorderLayout.NORTH);
-        card.add(words);
+        if (extra == null) card.add(words);
+        else {
+            JPanel middle = clear(new BorderLayout(0, 14));
+            middle.add(words, BorderLayout.NORTH);
+            middle.add(extra);
+            card.add(middle);
+        }
         card.add(buttons, BorderLayout.SOUTH);
         card.add(result, BorderLayout.WEST);
 
@@ -3609,7 +3741,7 @@ public final class Theme {
         dialog.getRootPane().registerKeyboardAction(event -> result.setValue(JOptionPane.CLOSED_OPTION),
             KeyStroke.getKeyStroke("ESCAPE"), JComponent.WHEN_IN_FOCUSED_WINDOW);
         dialog.getRootPane().setDefaultButton(primary);
-        dialog.setPreferredSize(new Dimension(420, no == null ? 270 : 270));
+        if (extra == null) dialog.setPreferredSize(new Dimension(420, 270));
         dialog.pack();
         dialog.setLocationRelativeTo(owner);
         dialog.setVisible(true);
@@ -3734,7 +3866,8 @@ public final class Theme {
         RoundedPanel group = new RoundedPanel(SOFT);
         group.radius = 999;
         group.outlined = false;
-        group.setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4));
+        group.setLayout(new GridLayout(1, labels.length, 2, 0));   // equal-width, centred labels
+        group.setBorder(new EmptyBorder(4, 4, 4, 4));
         JButton[] buttons = new JButton[labels.length];
         for (int i = 0; i < labels.length; i++) {
             int index = i;
@@ -3759,22 +3892,6 @@ public final class Theme {
         button.setFont(font(active ? Font.BOLD : Font.PLAIN, 13));
         button.putClientProperty("ghost", active ? null : Boolean.TRUE);
         button.repaint();
-    }
-
-    /** Diagonal green stripes used for revenue and profit throughout the reference. */
-    public static Paint hatch(Color base) {
-        BufferedImage tile = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D pen = tile.createGraphics();
-        pen.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        pen.setColor(base);
-        pen.fillRect(0, 0, 8, 8);
-        pen.setColor(new Color(11, 128, 82));
-        pen.setStroke(new BasicStroke(2.6f));
-        pen.drawLine(-2, 10, 10, -2);
-        pen.drawLine(-2, 2, 2, -2);
-        pen.drawLine(6, 10, 10, 6);
-        pen.dispose();
-        return new TexturePaint(tile, new Rectangle2D.Double(0, 0, 8, 8));
     }
 
     public static class SmoothPanel extends JPanel {

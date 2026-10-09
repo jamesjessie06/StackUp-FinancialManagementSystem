@@ -17,42 +17,34 @@ import javax.swing.border.EmptyBorder;
 public final class FinancialInsightsUI extends PageSupport {
     private static final long serialVersionUID = 1L;
     private final JPanel body = Theme.clear(new BorderLayout(0, 12));
-    private final JComponent range;
     private final int year = LocalDate.now().getYear();
 
     public FinancialInsightsUI(DashboardUI window) {
         super(window);
-        range = Theme.segmented(new String[]{"This month", "Quarter", Integer.toString(year)}, 2, Theme.INK, index -> build(index));
         add(body);
-        build(2);
+        build();
     }
 
     @Override protected String subtitle() { return "Where the money comes from, where it goes, and how each month compares."; }
-    @Override protected JComponent actions() { return range; }
 
-    private void build(int choice) {
-        LocalDate today = LocalDate.now();
-        LocalDate start = choice == 0 ? monthStart()
-            : choice == 1 ? LocalDate.of(year, (today.getMonthValue() - 1) / 3 * 3 + 1, 1) : LocalDate.of(year, 1, 1);
-        LocalDate end = choice == 0 ? monthEnd() : choice == 1 ? start.plusMonths(3).minusDays(1) : LocalDate.of(year, 12, 31);
+    private void build() {
+        LocalDate start = LocalDate.of(year, 1, 1);
+        LocalDate end = LocalDate.of(year, 12, 31);
         List<FinancialRecord> all = service.getRecords();
         List<FinancialRecord> scope = ChartData.between(all, start, end);
 
         body.removeAll();
-        JPanel top = Theme.clear(new BorderLayout(0, 12));
-        top.add(Theme.equal(12, highlight("Revenue", scope, true), highlight("Expense", scope, false)), BorderLayout.NORTH);
-        body.add(top, BorderLayout.NORTH);
 
         JPanel middle = Theme.clear(new BorderLayout(0, 12));
         middle.add(Theme.equal(12,
-            chartCard("Revenue by Category", null, new ChartPanel(scope, ChartPanel.Mode.REVENUE_CATEGORIES, year), 170),
-            chartCard("Expense by Category", null, new ChartPanel(scope, ChartPanel.Mode.EXPENSE_CATEGORIES, year), 170)), BorderLayout.NORTH);
+            chartCard("Revenue by Category", null, new ChartPanel(scope, ChartPanel.Mode.REVENUE_CATEGORIES, year), 210),
+            chartCard("Expense by Category", null, new ChartPanel(scope, ChartPanel.Mode.EXPENSE_CATEGORIES, year), 210)), BorderLayout.NORTH);
         JPanel monthly = chartCard("Monthly Performance",
-            "January – December " + year + " · " + today.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " to date",
-            new ChartPanel(all, ChartPanel.Mode.MONTHLY, year), 150);
+            "Revenue and expenses for each month of " + year + " - hover a month to see the amounts",
+            new ChartPanel(all, ChartPanel.Mode.MONTHLY, year), 200);
         JPanel legend = Theme.clear(new FlowLayout(FlowLayout.RIGHT, 14, 0));
-        legend.add(legendItem("Revenue", Theme.hatch(Theme.BRAND_MID)));
-        legend.add(legendItem("Expenses", Theme.INK));
+        legend.add(legendItem("Revenue", ChartPanel.REVENUE_LINE));
+        legend.add(legendItem("Expenses", ChartPanel.EXPENSE_LINE));
         ((JPanel) monthly.getComponent(0)).add(legend, BorderLayout.EAST);
         middle.add(monthly, BorderLayout.CENTER);
         body.add(middle);
@@ -98,18 +90,4 @@ public final class FinancialInsightsUI extends PageSupport {
         return card;
     }
 
-    private JPanel highlight(String type, List<FinancialRecord> scope, boolean revenue) {
-        FinancialRecord best = null;
-        for (FinancialRecord record : scope)
-            if (record.getType().equals(type) && (best == null || record.getAmount().compareTo(best.getAmount()) > 0)) best = record;
-        Theme.RoundedPanel card = Theme.hero(revenue ? Theme.BRAND : Theme.INK);
-        card.setLayout(new BorderLayout(18, 0));
-        card.setBorder(new EmptyBorder(14, 20, 14, 20));
-        card.add(Theme.badge(revenue ? Icons.Kind.UP_RIGHT : Icons.Kind.DOWN_RIGHT, Color.WHITE, revenue ? Theme.BRAND : Theme.INK, 52), BorderLayout.WEST);
-        JPanel text = Theme.clear(new GridLayout(2, 1, 0, 3));
-        text.add(Theme.plain("Highest " + type, 15, new Color(232, 244, 238)));
-        text.add(Theme.label(best == null ? "—" : Theme.money(best.getAmount()), 32, Color.WHITE));
-        card.add(text);
-        return card;
-    }
 }

@@ -51,14 +51,15 @@ public final class DashboardUI extends JFrame {
 
     private String[] pages() {
         return admin
-            ? new String[]{"Dashboard", "Transaction History", "Financial Report", "Financial Insights", "Activity Log", "Accounts"}
-            : new String[]{"Dashboard", "Financial Record", "Payments", "Transaction History"};
+            ? new String[]{"Dashboard", "Reminders", "Transaction History", "Financial Report", "Financial Insights", "Activity Log", "Accounts"}
+            : new String[]{"Dashboard", "Reminders", "Financial Record", "Payments", "Transaction History"};
     }
 
     private static Icons.Kind iconFor(String page) {
         switch (page) {
             case "Financial Record": return Icons.Kind.PLUS_CIRCLE;
             case "Payments": return Icons.Kind.CLOCK;
+            case "Reminders": return Icons.Kind.BELL;
             case "Transaction History": return Icons.Kind.DOC;
             case "Financial Report": return Icons.Kind.BARS;
             case "Financial Insights": return Icons.Kind.PIE;
@@ -101,11 +102,6 @@ public final class DashboardUI extends JFrame {
         bar.add(brand, BorderLayout.WEST);
 
         JPanel right = Theme.clear(new FlowLayout(FlowLayout.RIGHT, 14, 0));
-        Theme.RoundedPanel tools = pill();
-        tools.setLayout(new FlowLayout(FlowLayout.CENTER, 4, 6));
-        JButton bell = toolButton(Icons.Kind.BELL, "Payment reminders", event -> remind());
-        tools.add(bell);
-        right.add(tools);
         right.add(userPill());
         bar.add(right, BorderLayout.EAST);
         return bar;
@@ -115,32 +111,6 @@ public final class DashboardUI extends JFrame {
         Theme.RoundedPanel panel = new Theme.RoundedPanel(Color.WHITE);
         panel.radius = 999;
         return panel;
-    }
-
-    private JButton toolButton(Icons.Kind kind, String tip, java.awt.event.ActionListener action) {
-        JButton button = new JButton(Icons.of(kind, Theme.INK, 20));
-        button.setToolTipText(tip);
-        button.setBackground(Color.WHITE);
-        button.setForeground(Theme.INK);
-        button.putClientProperty("ghost", Boolean.TRUE);
-        button.setContentAreaFilled(false);
-        button.setFocusPainted(false);
-        button.setBorder(new EmptyBorder(9, 11, 9, 11));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.addActionListener(action);
-        return button;
-    }
-
-    private void remind() {
-        long pending = service.getPayments().stream().filter(p -> !p.isPaid()).count();
-        String message;
-        if (pending == 0) message = "No payments are waiting.";
-        else {
-            Payment next = service.getPayments().stream().filter(p -> !p.isPaid())
-                .min(java.util.Comparator.comparing(Payment::getDue)).orElseThrow();
-            message = pending + " payment(s) pending.\nNext: " + next.getDescription() + " due " + next.getDue().format(PageSupport.DAY) + ".";
-        }
-        Theme.message(this, "Payment reminders", message);
     }
 
     private JComponent userPill() {
@@ -255,6 +225,7 @@ public final class DashboardUI extends JFrame {
             case "Activity Log": screen = new ActivityLogUI(this); break;
             case "Accounts": screen = new AccountsUI(this); break;
             case "Payments": screen = new PaymentsUI(this); break;
+            case "Reminders": screen = new RemindersUI(this); break;
             default: screen = new DashboardPage(this);
         }
         String title = screen.title() != null ? screen.title() : page.equals("Dashboard") ? greeting() : page;

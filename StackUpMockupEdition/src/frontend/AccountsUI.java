@@ -7,18 +7,15 @@ import java.awt.*;
 import java.util.Arrays;
 import java.util.Locale;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
 /** Create accounts, see who has access, and reset an employee's password. */
 public final class AccountsUI extends PageSupport {
     private static final long serialVersionUID = 1L;
-    private String role = "Employee";
-
     public AccountsUI(DashboardUI window) {
         super(window);
         JPanel left = Theme.clear(new BorderLayout(0, 12));
-        left.add(createCard(), BorderLayout.NORTH);
+        left.add(pendingCard(), BorderLayout.CENTER);
 
         JPanel right = Theme.clear(new BorderLayout(0, 12));
         DefaultTableModel rows = model("Username", "Role", "Access");
@@ -104,7 +101,7 @@ public final class AccountsUI extends PageSupport {
     }
 
 
-    @Override protected String subtitle() { return "Create user accounts, assign roles and reset employee passwords."; }
+    @Override protected String subtitle() { return "Review new account requests, choose their role and reset employee passwords."; }
 
     private static JPasswordField passwordField(String hint) {
         Theme.RoundedPassword field = new Theme.RoundedPassword();
@@ -112,38 +109,65 @@ public final class AccountsUI extends PageSupport {
         return field;
     }
 
-    private JPanel createCard() {
-        JTextField username = Theme.input("e.g. maria");
-        JPasswordField password = passwordField("At least 8 characters");
-        JButton save = Theme.button("Save Account");
-        save.setPreferredSize(new Dimension(100, 42));
-        JPanel roles = Theme.segmented(new String[]{"Employee", "Admin"}, 0, Theme.INK, index -> role = index == 0 ? "Employee" : "Admin");
-        JPanel stretch = Theme.clear(new GridLayout(1, 1));
-        stretch.add(roles);
-        JPanel form = Theme.clear(new GridLayout(3, 1, 0, 8));
-        form.add(Theme.field("Username", username));
-        form.add(Theme.field("Password", password));
-        form.add(Theme.field("Role", stretch));
-        JPanel card = Theme.card();
-        card.setLayout(new BorderLayout(0, 14));
-        card.add(Theme.label("Create Account", 22, Theme.INK), BorderLayout.NORTH);
-        card.add(form);
-        card.add(save, BorderLayout.SOUTH);
-        save.addActionListener(event -> {
-            char[] value = password.getPassword();
-            try {
-                service.createAccount(username.getText(), value, role);
-                username.setText("");
-                Theme.message(this, "Account created", "The new account can sign in right away.");
-                window.refresh();
-            } catch (Exception exception) {
-                error(exception);
-            } finally {
-                Arrays.fill(value, '\0');
-                password.setText("");
-            }
+    /** Employee sign-up requests wait here until the admin reviews and approves or rejects them. */
+    private JPanel pendingCard() {
+        DefaultTableModel rows = model("Username", "Status");
+        JTable requests = table(rows, "user", "muted");
+        widths(requests, 160, 140);
+        requests.setRowHeight(44);
+        for (Account account : service.getPendingAccounts())
+            rows.addRow(new Object[]{account.getUsername(), "Waiting for review"});
+        JButton approve = Theme.button("Approve");
+        JButton reject = Theme.outline("Reject");
+        approve.setPreferredSize(new Dimension(100, 42));
+        reject.setPreferredSize(new Dimension(100, 42));
+        approve.setEnabled(false);
+        reject.setEnabled(false);
+        requests.getSelectionModel().addListSelectionListener(event -> {
+            boolean chosen = requests.getSelectedRow() >= 0;
+            approve.setEnabled(chosen);
+            reject.setEnabled(chosen);
         });
+        approve.addActionListener(event -> review(requests, rows, true));
+        reject.addActionListener(event -> review(requests, rows, false));
+
+        JPanel buttons = Theme.clear(new GridLayout(1, 2, 10, 0));
+        buttons.add(approve);
+        buttons.add(reject);
+        JPanel title = Theme.clear(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        title.add(Theme.label("Pending Requests", 22, Theme.INK));
+        title.add(Theme.muted("· " + rows.getRowCount(), 15));
+        JPanel card = Theme.card();
+        card.setLayout(new BorderLayout(0, 12));
+        card.add(title, BorderLayout.NORTH);
+        card.add(tableArea(requests, "No accounts waiting for approval."));
+        card.add(buttons, BorderLayout.SOUTH);
         return card;
+    }
+
+    private void review(JTable requests, DefaultTableModel rows, boolean approve) {
+        int row = requests.getSelectedRow();
+        if (row < 0) return;
+        String name = (String) rows.getValueAt(row, 0);
+        String[] chosenRole = {"Employee"};
+        boolean yes;
+        if (approve) {
+            JPanel roles = Theme.segmented(new String[]{"Employee", "Admin"}, 0, Theme.INK, index -> chosenRole[0] = index == 0 ? "Employee" : "Admin");
+            JPanel stretch = Theme.clear(new GridLayout(1, 1));
+            stretch.add(roles);
+            JPanel body = Theme.clear(new GridLayout(1, 1));
+            body.add(Theme.field("Role", stretch));
+            body.setPreferredSize(new Dimension(372, 80));
+            yes = Theme.form(this, Icons.Kind.CHECK, "Approve account", "Choose what " + name + " can do after signing in.", body, "Approve", "Cancel");
+        } else
+            yes = Theme.confirm(this, Icons.Kind.CLOSE, "Reject request?", "The request from " + name + " will be removed.", "Yes, reject", "Cancel");
+        if (!yes) return;
+        try {
+            if (approve) service.approveAccount(name, chosenRole[0]); else service.rejectAccount(name);
+            window.refresh();
+        } catch (Exception exception) {
+            error(exception);
+        }
     }
 
 }
