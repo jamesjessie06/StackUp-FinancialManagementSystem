@@ -117,7 +117,7 @@ public final class DashboardPage extends PageSupport {
             rows.addRow(new Object[]{new Desc(r.getDescription(), r.getCategory()), signed(r), r.getType(), r.getRecordedBy(), r.getDate().format(STAMP)});
         JTable table = table(rows, "desc", "money", "chip", "user", "muted");
         table.setRowHeight(52);
-        widths(table, 200, 120, 110, 120, 170);
+        widths(table, 175, 115, 135, 120, 170);
         card.add(tableArea(table, "No transactions recorded yet."));
         JButton all = Theme.link("View all transactions →");
         all.addActionListener(event -> window.navigate("Transaction History"));

@@ -78,6 +78,7 @@ public final class Theme {
     public static java.io.File asset(String name) {
         java.util.List<java.io.File> roots = new java.util.ArrayList<>();
         roots.add(new java.io.File("."));
+        roots.add(new java.io.File("FinancialManagementSystem"));
         roots.add(new java.io.File("StackUpMockupEdition"));
         try {
             java.io.File here = new java.io.File(Theme.class.getProtectionDomain().getCodeSource().getLocation().toURI());

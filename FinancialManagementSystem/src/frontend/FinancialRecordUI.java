@@ -121,7 +121,7 @@ public final class FinancialRecordUI extends PageSupport {
             rows.addRow(new Object[]{new Desc(r.getDescription(), r.getCategory()), r.getType(), signed(r), r.getDate().toLocalDate().format(DAY)});
         JTable table = table(rows, "desc", "chip", "money", "muted");
         table.setRowHeight(56);
-        widths(table, 200, 120, 130, 110);
+        widths(table, 190, 135, 125, 110);
         card.add(tableArea(table, "You haven't recorded anything yet."));
 
         return card;

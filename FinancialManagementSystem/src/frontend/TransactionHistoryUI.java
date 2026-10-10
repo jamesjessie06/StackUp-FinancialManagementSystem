@@ -54,7 +54,7 @@ public final class TransactionHistoryUI extends PageSupport {
         DefaultTableModel rows = model("Description", "Category", "Type", "Amount", "Date", "Recorded By");
         JTable table = table(rows, "text", "muted", "chip", "money", "muted", "user");
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        widths(table, 200, 110, 100, 130, 110, 130);
+        widths(table, 185, 105, 130, 120, 110, 130);
         JLabel selection = Theme.muted("", 14);
         Pager pager = new Pager(5, () -> refresh[0].run());
         JPanel card = Theme.card();
