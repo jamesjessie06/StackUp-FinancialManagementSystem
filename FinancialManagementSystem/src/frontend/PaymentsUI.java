@@ -1,8 +1,7 @@
 package frontend;
 
-import frontend.style.*;
-
 import backend.*;
+import frontend.style.*;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -12,12 +11,12 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-/** Schedule bills ahead of time and tick them off as they are paid. */
+
 public final class PaymentsUI extends PageSupport {
     private static final long serialVersionUID = 1L;
     private boolean showPaid;
 
-    /** Each click ticks or unticks a row, like a checkbox list. */
+    
     private static final class TickSelection extends DefaultListSelectionModel {
         private static final long serialVersionUID = 1L;
         @Override public void setSelectionInterval(int from, int to) {

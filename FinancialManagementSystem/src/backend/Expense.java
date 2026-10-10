@@ -2,7 +2,7 @@ package backend;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-/** INHERITANCE: Expense is a FinancialRecord whose amount takes away from profit. */
+
 public final class Expense extends FinancialRecord {
 
     private static final long serialVersionUID = 1L;

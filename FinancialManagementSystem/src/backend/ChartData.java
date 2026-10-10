@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
-/** Converts transaction records into chart totals. Contains no Swing code. */
 public final class ChartData {
 
     private ChartData() {}
@@ -18,7 +17,6 @@ public final class ChartData {
         return total;
     }
 
-    /** Profit of a list of records: revenues add, expenses subtract (each record decides its own sign). */
     public static BigDecimal net(List<FinancialRecord> records) {
         BigDecimal net = BigDecimal.ZERO;
         for (FinancialRecord record : records) net = net.add(record.signedAmount());

@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.time.*;
 import javax.swing.*;
 
-/** The two pop-up forms: add or edit a record, and schedule a payment. */
 public final class Dialogs {
     private Dialogs() {}
 
@@ -51,7 +50,6 @@ public final class Dialogs {
         return false;
     }
 
-    /** Shows the payment form. Returns true when a payment was scheduled. */
     public static boolean payment(Component owner, FinancialService service) {
         JTextField description = Theme.input("e.g. Office rent");
         JTextField category = Theme.input("e.g. Rent");

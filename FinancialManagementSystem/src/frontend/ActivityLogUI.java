@@ -1,7 +1,6 @@
 package frontend;
 
 import frontend.style.*;
-
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,7 +9,6 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-/** A record of every change made in StackUp, newest first. */
 public final class ActivityLogUI extends PageSupport {
     private static final long serialVersionUID = 1L;
     private static final String[] FILTERS = {"All", "Created", "Edited", "Deleted", "Account"};

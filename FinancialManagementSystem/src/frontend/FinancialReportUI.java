@@ -1,20 +1,15 @@
 package frontend;
 
-import frontend.style.*;
-
 import backend.*;
+import frontend.style.*;
 import java.awt.*;
-import java.io.File;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
-/** Revenue, expenses and profit for any date range, with charts and a PDF download. */
 public final class FinancialReportUI extends PageSupport {
     private static final long serialVersionUID = 1L;
 

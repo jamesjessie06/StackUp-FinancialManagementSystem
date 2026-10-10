@@ -1,19 +1,13 @@
 package frontend;
 
-import frontend.style.*;
-
 import backend.*;
+import frontend.style.*;
 import java.awt.*;
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.Month;
-import java.time.format.TextStyle;
-import java.util.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
-/** Where the money comes from and goes, with highlights for the chosen period. */
 public final class FinancialInsightsUI extends PageSupport {
     private static final long serialVersionUID = 1L;
     private final JPanel body = Theme.clear(new BorderLayout(0, 12));

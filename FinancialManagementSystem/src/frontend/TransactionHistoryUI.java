@@ -9,7 +9,7 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-/** Every revenue and expense with filters; admins can also edit or delete a record. */
+
 public final class TransactionHistoryUI extends PageSupport {
     private static final long serialVersionUID = 1L;
     private final List<FinancialRecord> matches = new ArrayList<>();
@@ -50,7 +50,7 @@ public final class TransactionHistoryUI extends PageSupport {
         top.add(filters, BorderLayout.CENTER);
         add(top, BorderLayout.NORTH);
 
-        // ---- table
+        
         DefaultTableModel rows = model("Description", "Category", "Type", "Amount", "Date", "Recorded By");
         JTable table = table(rows, "text", "muted", "chip", "money", "muted", "user");
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);

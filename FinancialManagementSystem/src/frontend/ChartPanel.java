@@ -1,8 +1,7 @@
 package frontend;
 
-import frontend.style.*;
-
 import backend.*;
+import frontend.style.*;
 import java.awt.*;
 import java.awt.geom.*;
 import java.math.BigDecimal;
@@ -11,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 
-/** Real-data charts: nothing is drawn unless a saved record backs it. */
 public final class ChartPanel extends JPanel {
     private static final long serialVersionUID = 1L;
     public enum Mode { MONTHLY, TOTALS, REVENUE_CATEGORIES, EXPENSE_CATEGORIES }
@@ -33,7 +31,6 @@ public final class ChartPanel extends JPanel {
         if (mode == Mode.MONTHLY) hoverTracking();
     }
 
-    /** Remembers which month the mouse is over so the line chart can show its values. */
     private void hoverTracking() {
         addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
             public void mouseMoved(java.awt.event.MouseEvent event) {
@@ -60,9 +57,8 @@ public final class ChartPanel extends JPanel {
         pen.dispose();
     }
 
-    // ------------------------------------------------------------ helpers
+    
 
-    /** Smallest "round" ceiling (1, 2, 2.5, 5 or 10 times a power of ten) above the value. */
     private static double ceiling(double value) {
         if (value <= 0) return 100;
         double magnitude = Math.pow(10, Math.floor(Math.log10(value)));
@@ -93,7 +89,6 @@ public final class ChartPanel extends JPanel {
         }
     }
 
-    /** Vertical bar with rounded corners at the top only. */
     private void bar(Graphics2D pen, Paint paint, double x, double top, double width, double bottom) {
         double height = bottom - top;
         if (height < 1) return;
@@ -126,9 +121,7 @@ public final class ChartPanel extends JPanel {
         text(pen, "No transactions recorded yet", cx, cy + 14, Theme.MUTED, true);
     }
 
-    // -------------------------------------------------------------- charts
-
-    /** Insights: revenue and expenses as two smooth lines, one point per month; hover to read a month. */
+    
     private void monthly(Graphics2D pen) {
         BigDecimal[][] data = ChartData.monthly(records, year);
         int shown = shownMonths();
@@ -162,12 +155,10 @@ public final class ChartPanel extends JPanel {
         if (records.isEmpty()) emptyNote(pen, (left + right) / 2, (top + bottom) / 2);
     }
 
-    /** Months to plot: all 12, or only up to the current month when showing this year. */
     private int shownMonths() {
         return year == java.time.LocalDate.now().getYear() ? java.time.LocalDate.now().getMonthValue() : 12;
     }
 
-    /** Smooth line through the points (a Catmull-Rom spline turned into Bezier curves). */
     private void curve(Graphics2D pen, double[] x, double[] y, Color color, int top, int bottom) {
         if (x.length == 0) return;
         Path2D path = new Path2D.Double();
@@ -185,7 +176,6 @@ public final class ChartPanel extends JPanel {
         pen.draw(path);
     }
 
-    /** A point with a white centre and a coloured ring. */
     private void dot(Graphics2D pen, double x, double y, Color color) {
         pen.setStroke(new BasicStroke(3f));
         pen.setColor(Color.WHITE);
@@ -214,7 +204,6 @@ public final class ChartPanel extends JPanel {
         text(pen, lines[2], bx + 14, by + 60, EXPENSE_LINE, false);
     }
 
-    /** Report: three bars with their values printed above them. */
     private void totals(Graphics2D pen) {
         double revenue = ChartData.total(records, "Revenue").doubleValue();
         double expense = ChartData.total(records, "Expense").doubleValue();
@@ -251,7 +240,6 @@ public final class ChartPanel extends JPanel {
         if (records.isEmpty()) emptyNote(pen, (left + right) / 2, (top + bottom) / 2);
     }
 
-    /** Doughnut with the total in the middle and a legend of amounts and shares. */
     private void donut(Graphics2D pen) {
         String type = mode == Mode.REVENUE_CATEGORIES ? "Revenue" : "Expense";
         Map<String, BigDecimal> data = ChartData.categories(records, type);

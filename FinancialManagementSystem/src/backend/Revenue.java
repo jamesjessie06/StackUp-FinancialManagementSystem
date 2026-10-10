@@ -2,7 +2,7 @@ package backend;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-/** INHERITANCE: Revenue is a FinancialRecord whose amount adds to profit. */
+
 public final class Revenue extends FinancialRecord {
 
     private static final long serialVersionUID = 1L;

@@ -10,7 +10,6 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-/** Employee data entry: a form on the left, your own latest records on the right. */
 public final class FinancialRecordUI extends PageSupport {
     private static final long serialVersionUID = 1L;
     private static final String[] REVENUE = {"Sales", "Services", "Other income"};
@@ -27,7 +26,6 @@ public final class FinancialRecordUI extends PageSupport {
 
     @Override protected String subtitle() { return "Log a new revenue or expense — it is saved to your name and shows in reports right away."; }
 
-    /** Revenue / Expense choice as two big buttons: the chosen one is filled, the other outlined. */
     private JPanel typeButtons(Runnable onChange) {
         JButton revenue = Theme.button("Revenue"), expense = Theme.button("Expense");
         for (JButton button : new JButton[]{revenue, expense}) button.setPreferredSize(new Dimension(100, 54));
@@ -101,7 +99,6 @@ public final class FinancialRecordUI extends PageSupport {
         return card;
     }
 
-    /** Your latest records. */
     private JPanel right() {
 
         JPanel card = Theme.card();

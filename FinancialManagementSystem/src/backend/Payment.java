@@ -16,7 +16,6 @@ public final class Payment implements Serializable {
 
     private final boolean paid;
 
-    /** Who scheduled it; null for payments saved before this was tracked. */
     private final String scheduledBy;
 
     public Payment(String description, String category, BigDecimal amount, LocalDate due) {

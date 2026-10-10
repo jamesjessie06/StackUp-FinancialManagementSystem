@@ -1,15 +1,13 @@
 package frontend;
 
-import frontend.style.*;
-
 import backend.*;
+import frontend.style.*;
 import java.awt.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
-/** Desktop shell: brand and account pills on top, a slim icon rail on the left, the page beside it. */
 public final class DashboardUI extends JFrame {
     private static final long serialVersionUID = 1L;
     private final FinancialService service;
@@ -69,7 +67,6 @@ public final class DashboardUI extends JFrame {
         }
     }
 
-    // ------------------------------------------------------------ top bar
 
     private static java.awt.image.BufferedImage loadLogo() {
         try { return javax.imageio.ImageIO.read(Theme.asset("logo.png")); }
@@ -136,7 +133,7 @@ public final class DashboardUI extends JFrame {
         }
     }
 
-    // --------------------------------------------------------------- rail
+    
 
     private JComponent rail() {
         JPanel column = Theme.clear(new BorderLayout());
@@ -258,7 +255,6 @@ public final class DashboardUI extends JFrame {
         return scroll;
     }
 
-    /** Fills the viewport width, and its height too when the page is shorter than the window. */
     private static final class ScrollBody extends JPanel implements Scrollable {
         private static final long serialVersionUID = 1L;
         ScrollBody() { super(new BorderLayout()); setOpaque(false); }

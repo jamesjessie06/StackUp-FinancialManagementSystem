@@ -9,7 +9,6 @@ import java.util.*;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
-/** Single shared service: every window reads the same saved records (Singleton). */
 public final class FinancialService {
 
     private static FinancialService instance;
@@ -126,7 +125,6 @@ public final class FinancialService {
                 throw new IllegalArgumentException("That username is already waiting for approval.");
     }
 
-    /** Anyone can request an account; it has no role and cannot sign in until an admin approves it. */
     public void requestAccount(String username, char[] password) throws Exception {
         username = username.trim();
         if (username.isBlank() || password.length < 8)
@@ -177,7 +175,6 @@ public final class FinancialService {
         throw new IllegalArgumentException("That request no longer exists.");
     }
 
-    /** Only admins can inspect account names and roles; password hashes remain private. */
     public List<Account> getAccounts() {
         require("Admin");
         return List.copyOf(state.accounts);

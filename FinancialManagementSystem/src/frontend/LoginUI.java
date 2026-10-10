@@ -1,13 +1,11 @@
 package frontend;
 
-import frontend.style.*;
-
 import backend.*;
+import frontend.style.*;
 import java.awt.*;
 import java.util.Arrays;
 import javax.swing.*;
 
-/** Just a username, a password and one button. */
 public final class LoginUI extends JFrame {
     private static final long serialVersionUID = 1L;
 
@@ -65,10 +63,7 @@ public final class LoginUI extends JFrame {
         getRootPane().setDefaultButton(login);
     }
 
-    /**
-     * A new Employee account is only a request: it waits in the admin's Accounts page and
-     * cannot sign in until an admin approves it.
-     */
+    
     private void createAccount(FinancialService service) {
         JTextField newName = Theme.input("Your Username");
         Theme.RoundedPassword newPassword = new Theme.RoundedPassword();
@@ -93,7 +88,6 @@ public final class LoginUI extends JFrame {
         }
     }
 
-    /** The StackUp logo. Its white lettering is recoloured dark so it reads on the white card. */
     private static final class LogoPanel extends JComponent {
         private static final long serialVersionUID = 1L;
         private final java.awt.image.BufferedImage logo;

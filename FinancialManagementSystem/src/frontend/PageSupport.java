@@ -1,23 +1,18 @@
 package frontend;
 
-import frontend.style.*;
-
 import backend.*;
+import frontend.style.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
-import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Locale;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.*;
 
-/** Shared building blocks for every page; business rules remain in the backend. */
 public abstract class PageSupport extends JPanel {
     private static final long serialVersionUID = 1L;
     static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
@@ -36,13 +31,11 @@ public abstract class PageSupport extends JPanel {
         admin = service.getCurrent().getRole().equals("Admin");
     }
 
-    /** Heading shown above the page; null uses the menu name. */
     protected String title() { return null; }
     protected String subtitle() { return ""; }
     /** Optional buttons shown at the right of the heading. */
     protected JComponent actions() { return null; }
 
-    // ---------------------------------------------------------------- cards
 
     protected JPanel titled(String title, JComponent body) {
         JPanel card = Theme.card();
@@ -56,7 +49,6 @@ public abstract class PageSupport extends JPanel {
         return stat(title, value, sub, style, icon, style == STYLE_WHITE ? Theme.INK : Color.WHITE, 30);
     }
 
-    /** A headline figure card in white, green or near-black. */
     protected JPanel stat(String title, String value, String sub, int style, Icons.Kind icon, Color valueColor, int size) {
         boolean solid = style != STYLE_WHITE;
         Theme.RoundedPanel card = style == STYLE_WHITE ? new Theme.RoundedPanel(Color.WHITE)
@@ -88,7 +80,6 @@ public abstract class PageSupport extends JPanel {
         bottom.add(stack, BorderLayout.SOUTH);
     }
 
-    /** Small rounded label such as "up 8%" with a direction arrow. */
     protected JComponent change(BigDecimal now, BigDecimal before, boolean onSolid, String suffix, boolean higherIsBetter) {
         JPanel row = Theme.clear(new FlowLayout(FlowLayout.LEFT, 8, 0));
         Color muted = onSolid ? new Color(222, 240, 231) : Theme.MUTED;
@@ -149,16 +140,16 @@ public abstract class PageSupport extends JPanel {
         return panel;
     }
 
-    // --------------------------------------------------------------- tables
+    
 
-    /** Value for a two-line description cell. */
+    
     public static final class Desc {
         final String title, sub;
         public Desc(String title, String sub) { this.title = title; this.sub = sub; }
         public String toString() { return title; }
     }
 
-    /** Value for a description cell that starts with a small calendar tile. */
+    
     public static final class Tile {
         final LocalDate date;
         final String text;
@@ -182,9 +173,7 @@ public abstract class PageSupport extends JPanel {
         return false;
     }
 
-    /**
-     * Styled table. Kinds per column: text, bold, muted, money, chip, user, desc, tile.
-     */
+    
     protected JTable table(DefaultTableModel model, String... kinds) {
         JTable table = new JTable(model);
         table.setRowHeight(46);
@@ -328,7 +317,7 @@ public abstract class PageSupport extends JPanel {
         };
     }
 
-    /** Rounded frame holding the table header and rows; shows a friendly message when empty. */
+    
     protected JPanel tableArea(JTable table, String message) {
         Theme.RoundedPanel box = new Theme.RoundedPanel(Color.WHITE);
         box.radius = 22;
@@ -348,7 +337,7 @@ public abstract class PageSupport extends JPanel {
         return box;
     }
 
-    // ------------------------------------------------------------- helpers
+    
 
     protected static String signed(FinancialRecord record) {
         return (record.signedAmount().signum() > 0 ? "+" : "−") + Theme.money(record.getAmount());
@@ -366,7 +355,7 @@ public abstract class PageSupport extends JPanel {
         if (Dialogs.payment(this, service)) window.refresh();
     }
 
-    /** Status words for a payment: Paid, Due today, Due in 3 days, Scheduled... */
+    
     protected static String dueText(Payment payment) {
         if (payment.isPaid()) return "Paid";
         long days = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), payment.getDue());

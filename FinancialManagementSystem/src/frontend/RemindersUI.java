@@ -11,7 +11,7 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-/** Every unpaid payment in due-date order, so nothing is missed. */
+
 public final class RemindersUI extends PageSupport {
     private static final long serialVersionUID = 1L;
 

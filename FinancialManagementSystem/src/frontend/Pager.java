@@ -1,13 +1,11 @@
 package frontend;
 
 import frontend.style.*;
-
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
 
-/** "Showing 1-7 of 128" with numbered page buttons. */
 public final class Pager extends Theme.SmoothPanel {
     private static final long serialVersionUID = 1L;
     private final int size;
@@ -44,7 +42,6 @@ public final class Pager extends Theme.SmoothPanel {
         repaint();
     }
 
-    /** Page indexes to show; -1 stands for an ellipsis. */
     private List<Integer> numbers(int pages) {
         List<Integer> list = new ArrayList<>();
         if (pages <= 6) {

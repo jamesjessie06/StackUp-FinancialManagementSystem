@@ -1,14 +1,12 @@
 package frontend;
 
 import frontend.style.*;
-
 import java.awt.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import javax.swing.*;
 
-/** Read-only rounded input backed by a Swing calendar. */
 public final class DatePicker extends Theme.RoundedField {
     private static final long serialVersionUID = 1L;
     private LocalDate selected;

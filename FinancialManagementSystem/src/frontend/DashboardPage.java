@@ -12,7 +12,6 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-/** Overview: this month's figures, the payments still to be made and the latest transactions. */
 public final class DashboardPage extends PageSupport {
     private static final long serialVersionUID = 1L;
     private final List<FinancialRecord> records = service.getRecords();
@@ -27,7 +26,6 @@ public final class DashboardPage extends PageSupport {
 
     @Override protected String subtitle() { return "Stay on top of your revenue, expenses and upcoming payments."; }
 
-    /** The month label. */
     @Override protected JComponent actions() {
         JPanel row = Theme.clear(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         JButton month = Theme.outline(LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)));
@@ -38,7 +36,6 @@ public final class DashboardPage extends PageSupport {
         return row;
     }
 
-    /** Revenue, expenses and profit for this month, each compared with last month. */
     private JPanel monthCards() {
         LocalDate start = monthStart(), end = monthEnd(), previousStart = start.minusMonths(1), previousEnd = start.minusDays(1);
         BigDecimal revenue = totalIn("Revenue", start, end), expense = totalIn("Expense", start, end);
@@ -61,7 +58,6 @@ public final class DashboardPage extends PageSupport {
         return list;
     }
 
-    /** Pending payments: the total owed and a reminder list sorted by due date. */
     private JPanel pendingCard() {
         List<Payment> pending = pending();
         BigDecimal total = BigDecimal.ZERO;

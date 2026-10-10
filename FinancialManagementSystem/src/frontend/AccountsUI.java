@@ -1,15 +1,13 @@
 package frontend;
 
-import frontend.style.*;
-
 import backend.*;
+import frontend.style.*;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Locale;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-/** Create accounts, see who has access, and reset an employee's password. */
 public final class AccountsUI extends PageSupport {
     private static final long serialVersionUID = 1L;
     public AccountsUI(DashboardUI window) {
@@ -109,7 +107,6 @@ public final class AccountsUI extends PageSupport {
         return field;
     }
 
-    /** Employee sign-up requests wait here until the admin reviews and approves or rejects them. */
     private JPanel pendingCard() {
         DefaultTableModel rows = model("Username", "Status");
         JTable requests = table(rows, "user", "muted");
